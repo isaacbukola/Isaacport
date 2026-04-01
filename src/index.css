@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-brand: #cff524;
+}
+
+@layer base {
+  body {
+    @apply bg-white text-black font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .content-container {
+    @apply w-full max-w-[1600px] mx-auto px-6 md:px-12;
+  }
+}
+
+[contenteditable="true"] {
+  @apply outline-none ring-2 ring-brand ring-offset-2 rounded-sm transition-all;
+}
+
+[contenteditable="true"]:hover {
+  @apply bg-brand/5;
+}
