@@ -1,0 +1,28 @@
+{
+  "entities": {
+    "appContent": {
+      "title": "App Content",
+      "description": "All editable content for the website.",
+      "type": "object",
+      "properties": {
+        "heroTitle": { "type": "string" },
+        "heroSub": { "type": "string" },
+        "portfolio": { "type": "array", "items": { "type": "object" } },
+        "services": { "type": "array", "items": { "type": "object" } },
+        "footerEmail": { "type": "string" },
+        "footerPhone": { "type": "string" },
+        "footerAddress": { "type": "string" },
+        "aboutText": { "type": "string" },
+        "aboutImage": { "type": "string" },
+        "upworkUrl": { "type": "string" },
+        "policies": { "type": "array", "items": { "type": "object" } }
+      }
+    }
+  },
+  "firestore": {
+    "/settings/content": {
+      "schema": "appContent",
+      "description": "Global website content"
+    }
+  }
+}

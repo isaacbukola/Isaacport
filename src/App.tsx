@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Save, Edit3, X, ExternalLink, Code, Search, Layout, Mail, Phone, MapPin, Menu, Zap, Database, ShoppingBag, Plus, Trash2 } from 'lucide-react';
+import { Save, Edit3, X, ExternalLink, Code, Search, Layout, Mail, Phone, MapPin, Menu, Zap, Database, ShoppingBag, Plus, Trash2, LogIn, LogOut, Loader2 } from 'lucide-react';
+import { db, auth, signIn, logout, OperationType, handleFirestoreError } from './firebase';
+import { doc, onSnapshot, setDoc, getDocFromServer } from 'firebase/firestore';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 // --- Types ---
 interface PortfolioItem {
@@ -8,6 +11,7 @@ interface PortfolioItem {
   title: string;
   category: string;
   image: string;
+  link?: string;
 }
 
 interface ServiceItem {
@@ -42,9 +46,9 @@ const DEFAULT_CONTENT: AppContent = {
   heroTitle: "Crafting High-Conversion Digital Experiences.",
   heroSub: "Specializing in high-end Wix development, SEO optimization, and intuitive UI/UX design for forward-thinking brands.",
   portfolio: [
-    { id: 'p1', title: 'Luxury Real Estate', category: 'Wix Development', image: 'https://picsum.photos/seed/realestate/800/600' },
-    { id: 'p2', title: 'Modern E-commerce', category: 'UI/UX Design', image: 'https://picsum.photos/seed/shop/800/600' },
-    { id: 'p3', title: 'Tech Startup', category: 'SEO Strategy', image: 'https://picsum.photos/seed/tech/800/600' },
+    { id: 'p1', title: 'Luxury Real Estate', category: 'Wix Development', image: 'https://picsum.photos/seed/realestate/800/600', link: 'https://www.wix.com' },
+    { id: 'p2', title: 'Modern E-commerce', category: 'UI/UX Design', image: 'https://picsum.photos/seed/shop/800/600', link: 'https://www.wix.com' },
+    { id: 'p3', title: 'Tech Startup', category: 'SEO Strategy', image: 'https://picsum.photos/seed/tech/800/600', link: 'https://www.wix.com' },
   ],
   services: [
     { id: 's1', title: 'Wix Development', description: 'Custom, high-performance websites built on the Wix platform with advanced Velo functionality.', icon: 'Code' },
@@ -82,63 +86,112 @@ const DEFAULT_CONTENT: AppContent = {
 export default function App() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [content, setContent] = useState<AppContent>(DEFAULT_CONTENT);
-  const [passkeyInput, setPasskeyInput] = useState('');
-  const [showPasskeyModal, setShowPasskeyModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [currentView, setCurrentView] = useState<'home' | 'portfolio' | 'services' | 'about' | 'policies' | 'contact'>('home');
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load content from localStorage on mount
+  const isAdmin = user?.email === 'isaacmason928@gmail.com';
+
+  // Test connection to Firestore
+  useEffect(() => {
+    async function testConnection() {
+      try {
+        await getDocFromServer(doc(db, 'settings', 'content'));
+      } catch (error) {
+        if(error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration. ");
+        }
+      }
+    }
+    testConnection();
+  }, []);
+
+  // Listen for Auth changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (!u) setIsEditMode(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Listen for Content changes
+  useEffect(() => {
+    const contentRef = doc(db, 'settings', 'content');
+    const unsubscribe = onSnapshot(contentRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setContent(snapshot.data() as AppContent);
+      } else {
+        // If no data exists yet, use default
+        setContent(DEFAULT_CONTENT);
+      }
+      setIsLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'settings/content');
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [currentView]);
 
   useEffect(() => {
-    const savedContent = localStorage.getItem('portfolio_content');
-    if (savedContent) {
-      try {
-        const parsed = JSON.parse(savedContent);
-        // Merge with default to handle schema updates
-        setContent({ ...DEFAULT_CONTENT, ...parsed });
-      } catch (e) {
-        console.error("Failed to parse saved content", e);
-      }
-    }
-
     // Hidden key combo listener: Ctrl + Shift + E
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'E') {
         if (isEditMode) {
           setIsEditMode(false);
+        } else if (isAdmin) {
+          setIsEditMode(true);
         } else {
-          setShowPasskeyModal(true);
+          setShowLoginModal(true);
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isEditMode]);
+  }, [isEditMode, isAdmin]);
 
   const navigateTo = (view: typeof currentView) => {
     setCurrentView(view);
     setShowMobileMenu(false);
   };
 
-  const handlePasskeySubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (passkeyInput === 'idowubbb123') {
-      setIsEditMode(true);
-      setShowPasskeyModal(false);
-      setPasskeyInput('');
-    } else {
-      alert('Incorrect passkey');
+  const handleLogin = async () => {
+    try {
+      await signIn();
+      setShowLoginModal(false);
+    } catch (error) {
+      console.error("Login failed", error);
+      alert("Login failed. Please try again.");
     }
   };
 
-  const saveChanges = () => {
-    localStorage.setItem('portfolio_content', JSON.stringify(content));
-    setIsEditMode(false);
-    alert('Changes saved successfully!');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setIsEditMode(false);
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
+  };
+
+  const saveChanges = async () => {
+    if (!isAdmin) return;
+    try {
+      await setDoc(doc(db, 'settings', 'content'), content);
+      setIsEditMode(false);
+      alert('Changes saved successfully to the cloud!');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'settings/content');
+      alert('Failed to save changes. Check console for details.');
+    }
   };
 
   const updateContent = (key: keyof AppContent, value: any) => {
@@ -182,7 +235,8 @@ export default function App() {
       id: `p${Date.now()}`,
       title: 'New Project',
       category: 'Category',
-      image: 'https://picsum.photos/seed/new/800/600'
+      image: 'https://picsum.photos/seed/new/800/600',
+      link: 'https://'
     };
     setContent(prev => ({ ...prev, portfolio: [...prev.portfolio, newItem] }));
   };
@@ -228,13 +282,32 @@ export default function App() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <button 
-              onClick={() => setShowPasskeyModal(true)}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              title="Admin Login"
-            >
-              <Edit3 size={18} className="text-gray-400" />
-            </button>
+            {isAdmin ? (
+              <div className="flex items-center space-x-2">
+                <button 
+                  onClick={() => setIsEditMode(!isEditMode)}
+                  className={`p-2 rounded-full transition-colors ${isEditMode ? 'bg-brand text-black' : 'hover:bg-gray-100 text-gray-400'}`}
+                  title={isEditMode ? "Exit Edit Mode" : "Enter Edit Mode"}
+                >
+                  <Edit3 size={18} />
+                </button>
+                <button 
+                  onClick={handleLogout}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
+                  title="Logout"
+                >
+                  <LogOut size={18} />
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setShowLoginModal(true)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                title="Admin Login"
+              >
+                <LogIn size={18} className="text-gray-400" />
+              </button>
+            )}
             
             {/* Mobile Menu Toggle */}
             <button 
@@ -335,14 +408,28 @@ export default function App() {
                     className="group relative"
                   >
                     <div className="aspect-[4/3] overflow-hidden bg-gray-200 mb-6 relative">
-                      <img 
-                        src={item.image} 
-                        alt={item.title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        referrerPolicy="no-referrer"
-                      />
+                      <a 
+                        href={item.link || '#'} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className={`block w-full h-full ${!item.link ? 'pointer-events-none' : ''}`}
+                      >
+                        <img 
+                          src={item.image} 
+                          alt={item.title}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          referrerPolicy="no-referrer"
+                        />
+                        {item.link && (
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="bg-brand text-black p-3 rounded-full">
+                              <ExternalLink size={20} />
+                            </div>
+                          </div>
+                        )}
+                      </a>
                       {isEditMode && (
-                        <div className="absolute top-4 right-4 flex flex-col space-y-2">
+                        <div className="absolute top-4 right-4 flex flex-col space-y-2 z-20">
                           <label className="bg-white p-2 rounded shadow-lg cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-center">
                             <input 
                               type="file" 
@@ -361,22 +448,38 @@ export default function App() {
                         </div>
                       )}
                     </div>
-                    <h4 
-                      contentEditable={isEditMode}
-                      onBlur={(e) => updatePortfolioItem(item.id, 'title', e.currentTarget.innerText)}
-                      suppressContentEditableWarning
-                      className="text-xl font-bold mb-1"
-                    >
-                      {item.title}
-                    </h4>
-                    <p 
-                      contentEditable={isEditMode}
-                      onBlur={(e) => updatePortfolioItem(item.id, 'category', e.currentTarget.innerText)}
-                      suppressContentEditableWarning
-                      className="text-sm text-gray-400 uppercase tracking-widest"
-                    >
-                      {item.category}
-                    </p>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 
+                          contentEditable={isEditMode}
+                          onBlur={(e) => updatePortfolioItem(item.id, 'title', e.currentTarget.innerText)}
+                          suppressContentEditableWarning
+                          className="text-xl font-bold mb-1"
+                        >
+                          {item.title}
+                        </h4>
+                        <p 
+                          contentEditable={isEditMode}
+                          onBlur={(e) => updatePortfolioItem(item.id, 'category', e.currentTarget.innerText)}
+                          suppressContentEditableWarning
+                          className="text-sm text-gray-400 uppercase tracking-widest"
+                        >
+                          {item.category}
+                        </p>
+                      </div>
+                      {isEditMode && (
+                        <div className="ml-4 flex flex-col items-end">
+                          <p className="text-[10px] font-bold uppercase text-gray-400 mb-1">Live Link</p>
+                          <input 
+                            type="text"
+                            value={item.link || ''}
+                            onChange={(e) => updatePortfolioItem(item.id, 'link', e.target.value)}
+                            className="text-xs p-1 border border-gray-200 rounded w-32 outline-none focus:border-brand"
+                            placeholder="https://..."
+                          />
+                        </div>
+                      )}
+                    </div>
                   </motion.div>
                 ))}
                 {isEditMode && (
@@ -744,9 +847,9 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Passkey Modal */}
+      {/* Login Modal */}
       <AnimatePresence>
-        {showPasskeyModal && (
+        {showLoginModal && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -761,28 +864,38 @@ export default function App() {
             >
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-2xl font-bold">Admin Access</h2>
-                <button onClick={() => setShowPasskeyModal(false)} className="text-gray-400 hover:text-black">
+                <button onClick={() => setShowLoginModal(false)} className="text-gray-400 hover:text-black">
                   <X size={24} />
                 </button>
               </div>
-              <form onSubmit={handlePasskeySubmit}>
-                <p className="text-gray-500 mb-6">Enter the passkey to enable live editing mode.</p>
-                <input 
-                  type="password" 
-                  value={passkeyInput}
-                  onChange={(e) => setPasskeyInput(e.target.value)}
-                  placeholder="Enter passkey..."
-                  className="w-full p-4 border-2 border-gray-100 rounded-xl mb-6 focus:border-brand outline-none transition-colors"
-                  autoFocus
-                />
+              <div className="text-center">
+                <p className="text-gray-500 mb-8">Login with your Google account to enable live editing mode. Only authorized admins can save changes.</p>
                 <button 
-                  type="submit"
-                  className="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition-colors"
+                  onClick={handleLogin}
+                  className="w-full flex items-center justify-center space-x-3 bg-black text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition-colors"
                 >
-                  Unlock Editor
+                  <LogIn size={20} />
+                  <span>Login with Google</span>
                 </button>
-              </form>
+              </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Loading Overlay */}
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-white"
+          >
+            <div className="flex flex-col items-center">
+              <Loader2 size={48} className="text-brand animate-spin mb-4" />
+              <p className="text-sm font-bold uppercase tracking-widest text-gray-400">Syncing with Cloud...</p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

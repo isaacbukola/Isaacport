@@ -1,0 +1,67 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: settings
+    // Document ID: content
+    // Fields:
+    //   - heroTitle: string
+    //   - heroSub: string
+    //   - portfolio: array of objects
+    //   - services: array of objects
+    //   - footerEmail: string
+    //   - footerPhone: string
+    //   - footerAddress: string
+    //   - aboutText: string
+    //   - aboutImage: string
+    //   - upworkUrl: string
+    //   - policies: array of objects
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.email == "isaacmason928@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function isValidContent(data) {
+      return data.keys().hasAll(['heroTitle', 'heroSub', 'portfolio', 'services', 'footerEmail', 'footerPhone', 'footerAddress', 'aboutText', 'aboutImage', 'upworkUrl', 'policies']) &&
+             data.heroTitle is string && data.heroTitle.size() < 500 &&
+             data.heroSub is string && data.heroSub.size() < 2000 &&
+             data.portfolio is list &&
+             data.services is list &&
+             data.footerEmail is string &&
+             data.footerPhone is string &&
+             data.footerAddress is string &&
+             data.aboutText is string && data.aboutText.size() < 5000 &&
+             data.aboutImage is string &&
+             data.upworkUrl is string &&
+             data.policies is list;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /settings/content {
+      allow read: if true; // Publicly readable
+      allow write: if isAdmin() && isValidContent(request.resource.data);
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
