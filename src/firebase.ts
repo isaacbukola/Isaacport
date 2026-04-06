@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -9,6 +9,7 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
 export const signIn = () => signInWithPopup(auth, googleProvider);
+export const signInEmail = (email: string, pass: string) => signInWithEmailAndPassword(auth, email, pass);
 export const logout = () => signOut(auth);
 
 export enum OperationType {

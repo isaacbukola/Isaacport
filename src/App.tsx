@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Save, Edit3, X, ExternalLink, Code, Search, Layout, Mail, Phone, MapPin, Menu, Zap, Database, ShoppingBag, Plus, Trash2, LogIn, LogOut, Loader2 } from 'lucide-react';
-import { db, auth, signIn, logout, OperationType, handleFirestoreError } from './firebase';
+import { db, auth, signIn, logout, OperationType, handleFirestoreError, signInEmail } from './firebase';
 import { doc, onSnapshot, setDoc, getDocFromServer } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
@@ -91,6 +91,9 @@ export default function App() {
   const [currentView, setCurrentView] = useState<'home' | 'portfolio' | 'services' | 'about' | 'policies' | 'contact'>('home');
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [loginMethod, setLoginMethod] = useState<'google' | 'email'>('google');
 
   const isAdmin = user?.email === 'isaacmason928@gmail.com';
 
@@ -167,9 +170,22 @@ export default function App() {
     try {
       await signIn();
       setShowLoginModal(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed", error);
-      alert("Login failed. Please try again.");
+      alert(`Login failed: ${error.message || 'Unknown error'}. If you are on Vercel, make sure to add your domain to Firebase Authorized Domains.`);
+    }
+  };
+
+  const handleEmailLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      await signInEmail(emailInput, passwordInput);
+      setShowLoginModal(false);
+      setEmailInput('');
+      setPasswordInput('');
+    } catch (error: any) {
+      console.error("Email login failed", error);
+      alert(`Email login failed: ${error.message || 'Unknown error'}. Make sure Email/Password auth is enabled in Firebase Console.`);
     }
   };
 
@@ -869,14 +885,64 @@ export default function App() {
                 </button>
               </div>
               <div className="text-center">
-                <p className="text-gray-500 mb-8">Login with your Google account to enable live editing mode. Only authorized admins can save changes.</p>
-                <button 
-                  onClick={handleLogin}
-                  className="w-full flex items-center justify-center space-x-3 bg-black text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition-colors"
-                >
-                  <LogIn size={20} />
-                  <span>Login with Google</span>
-                </button>
+                <div className="flex border-b border-gray-100 mb-8">
+                  <button 
+                    onClick={() => setLoginMethod('google')}
+                    className={`flex-1 py-3 text-sm font-bold uppercase tracking-widest transition-colors ${loginMethod === 'google' ? 'text-brand border-b-2 border-brand' : 'text-gray-400'}`}
+                  >
+                    Google
+                  </button>
+                  <button 
+                    onClick={() => setLoginMethod('email')}
+                    className={`flex-1 py-3 text-sm font-bold uppercase tracking-widest transition-colors ${loginMethod === 'email' ? 'text-brand border-b-2 border-brand' : 'text-gray-400'}`}
+                  >
+                    Email
+                  </button>
+                </div>
+
+                {loginMethod === 'google' ? (
+                  <>
+                    <p className="text-gray-500 mb-8">Login with your Google account to enable live editing mode. Only authorized admins can save changes.</p>
+                    <button 
+                      onClick={handleLogin}
+                      className="w-full flex items-center justify-center space-x-3 bg-black text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition-colors"
+                    >
+                      <LogIn size={20} />
+                      <span>Login with Google</span>
+                    </button>
+                  </>
+                ) : (
+                  <form onSubmit={handleEmailLogin} className="text-left">
+                    <div className="mb-4">
+                      <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Email Address</label>
+                      <input 
+                        type="email" 
+                        value={emailInput}
+                        onChange={(e) => setEmailInput(e.target.value)}
+                        className="w-full p-4 border-2 border-gray-100 rounded-xl focus:border-brand outline-none transition-colors"
+                        placeholder="your@email.com"
+                        required
+                      />
+                    </div>
+                    <div className="mb-8">
+                      <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Password</label>
+                      <input 
+                        type="password" 
+                        value={passwordInput}
+                        onChange={(e) => setPasswordInput(e.target.value)}
+                        className="w-full p-4 border-2 border-gray-100 rounded-xl focus:border-brand outline-none transition-colors"
+                        placeholder="••••••••"
+                        required
+                      />
+                    </div>
+                    <button 
+                      type="submit"
+                      className="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition-colors"
+                    >
+                      Login with Email
+                    </button>
+                  </form>
+                )}
               </div>
             </motion.div>
           </motion.div>
