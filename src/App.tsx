@@ -91,6 +91,8 @@ export default function App() {
   const [currentView, setCurrentView] = useState<'home' | 'portfolio' | 'services' | 'about' | 'policies' | 'contact'>('home');
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginMethod, setLoginMethod] = useState<'google' | 'email'>('google');
@@ -124,9 +126,11 @@ export default function App() {
   useEffect(() => {
     const contentRef = doc(db, 'settings', 'content');
     const unsubscribe = onSnapshot(contentRef, (snapshot) => {
-      if (snapshot.exists()) {
+      // Only update local state if we are NOT in edit mode
+      // This prevents overwriting unsaved changes
+      if (snapshot.exists() && !isEditMode) {
         setContent(snapshot.data() as AppContent);
-      } else {
+      } else if (!snapshot.exists()) {
         // If no data exists yet, use default
         setContent(DEFAULT_CONTENT);
       }
@@ -137,7 +141,7 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isEditMode]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -167,17 +171,28 @@ export default function App() {
   };
 
   const handleLogin = async () => {
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
     try {
       await signIn();
       setShowLoginModal(false);
     } catch (error: any) {
-      console.error("Login failed", error);
-      alert(`Login failed: ${error.message || 'Unknown error'}. If you are on Vercel, make sure to add your domain to Firebase Authorized Domains.`);
+      if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
+        // Ignore these errors as they are user-initiated or side effects
+        console.log("Login popup closed or cancelled");
+      } else {
+        console.error("Login failed", error);
+        alert(`Login failed: ${error.message || 'Unknown error'}. If you are on Netlify, make sure to add your domain to Firebase Authorized Domains.`);
+      }
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
   const handleEmailLogin = async (e: FormEvent) => {
     e.preventDefault();
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
     try {
       await signInEmail(emailInput, passwordInput);
       setShowLoginModal(false);
@@ -186,6 +201,8 @@ export default function App() {
     } catch (error: any) {
       console.error("Email login failed", error);
       alert(`Email login failed: ${error.message || 'Unknown error'}. Make sure Email/Password auth is enabled in Firebase Console.`);
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -199,14 +216,26 @@ export default function App() {
   };
 
   const saveChanges = async () => {
-    if (!isAdmin) return;
+    if (!isAdmin || isSaving) return;
+    
+    // Basic size check for Firestore (1MB limit)
+    const contentSize = JSON.stringify(content).length;
+    if (contentSize > 1000000) {
+      alert("The total size of your content (including images) is too large for the database. Please use smaller images or fewer items.");
+      return;
+    }
+
+    setIsSaving(true);
     try {
       await setDoc(doc(db, 'settings', 'content'), content);
       setIsEditMode(false);
       alert('Changes saved successfully to the cloud!');
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Save failed", error);
       handleFirestoreError(error, OperationType.WRITE, 'settings/content');
-      alert('Failed to save changes. Check console for details.');
+      alert(`Failed to save changes: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -238,6 +267,12 @@ export default function App() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Check file size (limit to 500KB per image to be safe)
+      if (file.size > 500000) {
+        alert("Image is too large. Please choose an image smaller than 500KB to ensure it can be saved to the database.");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         callback(reader.result as string);
@@ -446,21 +481,34 @@ export default function App() {
                       </a>
                       {isEditMode && (
                         <div className="absolute top-4 right-4 flex flex-col space-y-2 z-20">
-                          <label className="bg-white p-2 rounded shadow-lg cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-center">
+                          <div className="flex space-x-2">
+                            <label className="bg-white p-2 rounded shadow-lg cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-center" title="Upload Image">
+                              <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={(e) => handleImageUpload(e, (base64) => updatePortfolioItem(item.id, 'image', base64))}
+                                className="hidden"
+                              />
+                              <Edit3 size={14} className="text-gray-600" />
+                            </label>
+                            <button 
+                              onClick={() => removePortfolioItem(item.id)}
+                              className="bg-red-500 text-white p-2 rounded shadow-lg hover:bg-red-600 transition-colors"
+                              title="Remove Project"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                          <div className="bg-white p-2 rounded shadow-lg">
+                            <p className="text-[10px] font-bold uppercase text-gray-400 mb-1">Image URL</p>
                             <input 
-                              type="file" 
-                              accept="image/*"
-                              onChange={(e) => handleImageUpload(e, (base64) => updatePortfolioItem(item.id, 'image', base64))}
-                              className="hidden"
+                              type="text"
+                              value={item.image}
+                              onChange={(e) => updatePortfolioItem(item.id, 'image', e.target.value)}
+                              className="text-[10px] p-1 border border-gray-200 rounded w-32 outline-none focus:border-brand"
+                              placeholder="https://..."
                             />
-                            <Edit3 size={14} className="text-gray-600" />
-                          </label>
-                          <button 
-                            onClick={() => removePortfolioItem(item.id)}
-                            className="bg-red-500 text-white p-2 rounded shadow-lg hover:bg-red-600 transition-colors"
-                          >
-                            <X size={14} />
-                          </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -530,19 +578,31 @@ export default function App() {
                     />
                     {isEditMode && (
                       <div className="absolute bottom-4 left-4 right-4 bg-white p-4 rounded-xl shadow-2xl">
-                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Upload Profile Photo</p>
-                        <label className="w-full flex items-center justify-center p-4 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:border-brand hover:bg-brand/5 transition-all">
-                          <input 
-                            type="file" 
-                            accept="image/*"
-                            onChange={(e) => handleImageUpload(e, (base64) => updateContent('aboutImage', base64))}
-                            className="hidden"
-                          />
-                          <div className="flex flex-col items-center">
-                            <Edit3 size={20} className="text-gray-400 mb-1" />
-                            <span className="text-xs font-bold text-gray-400">Choose File</span>
+                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Profile Photo</p>
+                        <div className="flex flex-col space-y-4">
+                          <label className="w-full flex items-center justify-center p-4 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:border-brand hover:bg-brand/5 transition-all">
+                            <input 
+                              type="file" 
+                              accept="image/*"
+                              onChange={(e) => handleImageUpload(e, (base64) => updateContent('aboutImage', base64))}
+                              className="hidden"
+                            />
+                            <div className="flex flex-col items-center">
+                              <Edit3 size={20} className="text-gray-400 mb-1" />
+                              <span className="text-xs font-bold text-gray-400">Upload File</span>
+                            </div>
+                          </label>
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase mb-1">Or Paste Image URL</span>
+                            <input 
+                              type="text"
+                              value={content.aboutImage}
+                              onChange={(e) => updateContent('aboutImage', e.target.value)}
+                              className="text-xs p-2 border border-gray-200 rounded outline-none focus:border-brand"
+                              placeholder="https://..."
+                            />
                           </div>
-                        </label>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -848,10 +908,11 @@ export default function App() {
           >
             <button 
               onClick={saveChanges}
-              className="flex items-center space-x-2 bg-brand text-black px-8 py-4 rounded-full font-bold shadow-2xl hover:scale-105 transition-transform"
+              disabled={isSaving}
+              className={`flex items-center space-x-2 bg-brand text-black px-8 py-4 rounded-full font-bold shadow-2xl transition-all ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:scale-105'}`}
             >
-              <Save size={20} />
-              <span>Save Changes</span>
+              {isSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
+              <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
             </button>
             <button 
               onClick={() => setIsEditMode(false)}
@@ -905,10 +966,11 @@ export default function App() {
                     <p className="text-gray-500 mb-8">Login with your Google account to enable live editing mode. Only authorized admins can save changes.</p>
                     <button 
                       onClick={handleLogin}
-                      className="w-full flex items-center justify-center space-x-3 bg-black text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition-colors"
+                      disabled={isLoggingIn}
+                      className={`w-full flex items-center justify-center space-x-3 bg-black text-white py-4 rounded-xl font-bold transition-colors ${isLoggingIn ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-800'}`}
                     >
-                      <LogIn size={20} />
-                      <span>Login with Google</span>
+                      {isLoggingIn ? <Loader2 size={20} className="animate-spin" /> : <LogIn size={20} />}
+                      <span>{isLoggingIn ? 'Logging in...' : 'Login with Google'}</span>
                     </button>
                   </>
                 ) : (
@@ -937,9 +999,11 @@ export default function App() {
                     </div>
                     <button 
                       type="submit"
-                      className="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition-colors"
+                      disabled={isLoggingIn}
+                      className={`w-full flex items-center justify-center space-x-3 bg-black text-white py-4 rounded-xl font-bold transition-colors ${isLoggingIn ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-800'}`}
                     >
-                      Login with Email
+                      {isLoggingIn ? <Loader2 size={20} className="animate-spin" /> : <LogIn size={20} />}
+                      <span>{isLoggingIn ? 'Logging in...' : 'Login with Email'}</span>
                     </button>
                   </form>
                 )}
