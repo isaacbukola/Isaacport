@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Save, Edit3, X, ExternalLink, Code, Search, Layout, Mail, Phone, MapPin, Menu, Zap, Database, ShoppingBag, Plus, Trash2, LogIn, LogOut, Loader2 } from 'lucide-react';
+import { Save, Edit3, X, ExternalLink, Code, Search, Layout, Mail, Phone, MapPin, Menu, Zap, Database, ShoppingBag, Plus, Trash2, LogIn, LogOut, Loader2, FileCode, Eye } from 'lucide-react';
 import { db, auth, signIn, logout, OperationType, handleFirestoreError, signInEmail } from './firebase';
 import { doc, onSnapshot, setDoc, getDocFromServer } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -12,6 +12,7 @@ interface PortfolioItem {
   category: string;
   image: string;
   link?: string;
+  htmlContent?: string;
 }
 
 interface ServiceItem {
@@ -96,6 +97,7 @@ export default function App() {
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginMethod, setLoginMethod] = useState<'google' | 'email'>('google');
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
 
   const isAdmin = user?.email === 'isaacmason928@gmail.com';
 
@@ -278,6 +280,22 @@ export default function App() {
         callback(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleHtmlUpload = (e: React.ChangeEvent<HTMLInputElement>, id: string) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 300000) {
+        alert("HTML file is too large. Please keep it under 300KB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        updatePortfolioItem(id, 'htmlContent' as any, content);
+      };
+      reader.readAsText(file);
     }
   };
 
@@ -491,6 +509,15 @@ export default function App() {
                               />
                               <Edit3 size={14} className="text-gray-600" />
                             </label>
+                            <label className="bg-brand p-2 rounded shadow-lg cursor-pointer hover:bg-brand/90 transition-colors flex items-center justify-center" title="Upload HTML Design">
+                              <input 
+                                type="file" 
+                                accept=".html"
+                                onChange={(e) => handleHtmlUpload(e, item.id)}
+                                className="hidden"
+                              />
+                              <FileCode size={14} className="text-black" />
+                            </label>
                             <button 
                               onClick={() => removePortfolioItem(item.id)}
                               className="bg-red-500 text-white p-2 rounded shadow-lg hover:bg-red-600 transition-colors"
@@ -513,7 +540,7 @@ export default function App() {
                       )}
                     </div>
                     <div className="flex justify-between items-start">
-                      <div>
+                      <div className="flex-grow">
                         <h4 
                           contentEditable={isEditMode}
                           onBlur={(e) => updatePortfolioItem(item.id, 'title', e.currentTarget.innerText)}
@@ -530,6 +557,15 @@ export default function App() {
                         >
                           {item.category}
                         </p>
+                        {item.htmlContent && (
+                          <button 
+                            onClick={() => setPreviewHtml(item.htmlContent || null)}
+                            className="mt-4 flex items-center space-x-2 text-xs font-bold uppercase tracking-widest text-brand hover:text-black transition-colors"
+                          >
+                            <Eye size={14} />
+                            <span>View Design</span>
+                          </button>
+                        )}
                       </div>
                       {isEditMode && (
                         <div className="ml-4 flex flex-col items-end">
@@ -1007,6 +1043,48 @@ export default function App() {
                     </button>
                   </form>
                 )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* HTML Preview Modal */}
+      <AnimatePresence>
+        {previewHtml && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 md:p-12"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white w-full h-full rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            >
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-white">
+                <div className="flex items-center space-x-3">
+                  <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                  <span className="ml-4 text-xs font-bold uppercase tracking-widest text-gray-400">Design Preview</span>
+                </div>
+                <button 
+                  onClick={() => setPreviewHtml(null)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              <div className="flex-grow bg-gray-50">
+                <iframe 
+                  srcDoc={previewHtml}
+                  title="Design Preview"
+                  className="w-full h-full border-none"
+                  sandbox="allow-scripts"
+                />
               </div>
             </motion.div>
           </motion.div>
