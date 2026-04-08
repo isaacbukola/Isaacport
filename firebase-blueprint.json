@@ -15,7 +15,9 @@
         "aboutText": { "type": "string" },
         "aboutImage": { "type": "string" },
         "upworkUrl": { "type": "string" },
-        "policies": { "type": "array", "items": { "type": "object" } }
+        "policies": { "type": "array", "items": { "type": "object" } },
+        "caseStudies": { "type": "array", "items": { "type": "object" } },
+        "employmentHistory": { "type": "array", "items": { "type": "object" } }
       }
     }
   },

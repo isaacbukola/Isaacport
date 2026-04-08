@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Save, Edit3, X, ExternalLink, Code, Search, Layout, Mail, Phone, MapPin, Menu, Zap, Database, ShoppingBag, Plus, Trash2, LogIn, LogOut, Loader2, FileCode, Eye } from 'lucide-react';
+import { Save, Edit3, X, ExternalLink, Code, Search, Layout, Mail, Phone, MapPin, Menu, Zap, Database, ShoppingBag, Plus, Trash2, LogIn, LogOut, Loader2, FileCode, Eye, Briefcase, BookOpen } from 'lucide-react';
 import { db, auth, signIn, logout, OperationType, handleFirestoreError, signInEmail } from './firebase';
 import { doc, onSnapshot, setDoc, getDocFromServer } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -28,6 +28,24 @@ interface PolicyItem {
   content: string;
 }
 
+interface CaseStudy {
+  id: string;
+  title: string;
+  client: string;
+  challenge: string;
+  solution: string;
+  results: string;
+  image: string;
+}
+
+interface EmploymentHistory {
+  id: string;
+  role: string;
+  company: string;
+  period: string;
+  description: string;
+}
+
 interface AppContent {
   heroTitle: string;
   heroSub: string;
@@ -40,6 +58,8 @@ interface AppContent {
   aboutImage: string;
   upworkUrl: string;
   policies: PolicyItem[];
+  caseStudies: CaseStudy[];
+  employmentHistory: EmploymentHistory[];
 }
 
 // --- Default Content ---
@@ -81,6 +101,26 @@ const DEFAULT_CONTENT: AppContent = {
       title: 'Communication & Response Policy',
       content: 'I believe clear communication is the key to a successful project. I am available for updates and discussions during regular business hours (9 AM - 6 PM GMT+1). I aim to respond to all inquiries within 24 hours.'
     }
+  ],
+  caseStudies: [
+    {
+      id: 'cs1',
+      title: 'E-commerce Conversion Boost',
+      client: 'Fashion Retailer',
+      challenge: 'The client was experiencing high bounce rates and low mobile conversion on their existing Wix store.',
+      solution: 'I implemented a custom Velo-powered filtering system and optimized the mobile checkout flow for speed and simplicity.',
+      results: '35% increase in mobile conversions and a 20% reduction in bounce rate within the first 3 months.',
+      image: 'https://picsum.photos/seed/case1/800/600'
+    }
+  ],
+  employmentHistory: [
+    {
+      id: 'eh1',
+      role: 'Senior Wix & Velo Developer',
+      company: 'Freelance / Upwork',
+      period: '2021 - Present',
+      description: 'Developed over 50+ custom Wix websites for global clients, specializing in complex Velo integrations and SEO optimization.'
+    }
   ]
 };
 
@@ -89,7 +129,7 @@ export default function App() {
   const [content, setContent] = useState<AppContent>(DEFAULT_CONTENT);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [currentView, setCurrentView] = useState<'home' | 'portfolio' | 'services' | 'about' | 'policies' | 'contact'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'portfolio' | 'services' | 'about' | 'policies' | 'contact' | 'case-studies' | 'experience'>('home');
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -328,6 +368,52 @@ export default function App() {
     setContent(prev => ({ ...prev, services: prev.services.filter(item => item.id !== id) }));
   };
 
+  const updateCaseStudy = (id: string, field: keyof CaseStudy, value: string) => {
+    setContent(prev => ({
+      ...prev,
+      caseStudies: (prev.caseStudies || []).map(item => item.id === id ? { ...item, [field]: value } : item)
+    }));
+  };
+
+  const addCaseStudy = () => {
+    const newItem: CaseStudy = {
+      id: `cs${Date.now()}`,
+      title: 'New Case Study',
+      client: 'Client Name',
+      challenge: 'What was the problem?',
+      solution: 'How did you fix it?',
+      results: 'What were the results?',
+      image: 'https://picsum.photos/seed/cs/800/600'
+    };
+    setContent(prev => ({ ...prev, caseStudies: [...(prev.caseStudies || []), newItem] }));
+  };
+
+  const removeCaseStudy = (id: string) => {
+    setContent(prev => ({ ...prev, caseStudies: (prev.caseStudies || []).filter(item => item.id !== id) }));
+  };
+
+  const updateEmployment = (id: string, field: keyof EmploymentHistory, value: string) => {
+    setContent(prev => ({
+      ...prev,
+      employmentHistory: (prev.employmentHistory || []).map(item => item.id === id ? { ...item, [field]: value } : item)
+    }));
+  };
+
+  const addEmployment = () => {
+    const newItem: EmploymentHistory = {
+      id: `eh${Date.now()}`,
+      role: 'Role Name',
+      company: 'Company Name',
+      period: 'Jan 2020 - Present',
+      description: 'Role description goes here.'
+    };
+    setContent(prev => ({ ...prev, employmentHistory: [...(prev.employmentHistory || []), newItem] }));
+  };
+
+  const removeEmployment = (id: string) => {
+    setContent(prev => ({ ...prev, employmentHistory: (prev.employmentHistory || []).filter(item => item.id !== id) }));
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navigation */}
@@ -344,6 +430,8 @@ export default function App() {
           <div className="hidden md:flex space-x-12 text-sm font-medium uppercase tracking-widest text-gray-500">
             <button onClick={() => navigateTo('home')} className={`hover:text-black transition-colors ${currentView === 'home' ? 'text-black' : ''}`}>Home</button>
             <button onClick={() => navigateTo('portfolio')} className={`hover:text-black transition-colors ${currentView === 'portfolio' ? 'text-black' : ''}`}>Portfolio</button>
+            <button onClick={() => navigateTo('case-studies')} className={`hover:text-black transition-colors ${currentView === 'case-studies' ? 'text-black' : ''}`}>Case Studies</button>
+            <button onClick={() => navigateTo('experience')} className={`hover:text-black transition-colors ${currentView === 'experience' ? 'text-black' : ''}`}>Experience</button>
             <button onClick={() => navigateTo('services')} className={`hover:text-black transition-colors ${currentView === 'services' ? 'text-black' : ''}`}>Services</button>
             <button onClick={() => navigateTo('about')} className={`hover:text-black transition-colors ${currentView === 'about' ? 'text-black' : ''}`}>About</button>
             <button onClick={() => navigateTo('policies')} className={`hover:text-black transition-colors ${currentView === 'policies' ? 'text-black' : ''}`}>Policies</button>
@@ -400,6 +488,8 @@ export default function App() {
               <div className="flex flex-col p-8 space-y-6 text-lg font-bold uppercase tracking-widest">
                 <button onClick={() => navigateTo('home')} className={currentView === 'home' ? 'text-brand' : 'text-gray-400'}>Home</button>
                 <button onClick={() => navigateTo('portfolio')} className={currentView === 'portfolio' ? 'text-brand' : 'text-gray-400'}>Portfolio</button>
+                <button onClick={() => navigateTo('case-studies')} className={currentView === 'case-studies' ? 'text-brand' : 'text-gray-400'}>Case Studies</button>
+                <button onClick={() => navigateTo('experience')} className={currentView === 'experience' ? 'text-brand' : 'text-gray-400'}>Experience</button>
                 <button onClick={() => navigateTo('services')} className={currentView === 'services' ? 'text-brand' : 'text-gray-400'}>Services</button>
                 <button onClick={() => navigateTo('about')} className={currentView === 'about' ? 'text-brand' : 'text-gray-400'}>About</button>
                 <button onClick={() => navigateTo('policies')} className={currentView === 'policies' ? 'text-brand' : 'text-gray-400'}>Policies</button>
@@ -675,6 +765,193 @@ export default function App() {
                     </div>
                   </div>
                 </motion.div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {currentView === 'case-studies' && (
+          <section id="case-studies" className="py-24 min-h-[70vh]">
+            <div className="content-container">
+              <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 mb-4">Success Stories</h2>
+              <h1 className="text-5xl md:text-7xl font-bold mb-16">Case <span className="text-brand">Studies</span></h1>
+              
+              <div className="grid grid-cols-1 gap-24">
+                {(content.caseStudies || []).map((cs, index) => (
+                  <motion.div 
+                    key={cs.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center group relative"
+                  >
+                    {isEditMode && (
+                      <button 
+                        onClick={() => removeCaseStudy(cs.id)}
+                        className="absolute -top-4 -right-4 p-2 bg-red-500 text-white rounded-full z-10"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                    <div className={`aspect-video bg-gray-100 rounded-3xl overflow-hidden relative ${index % 2 === 1 ? 'lg:order-2' : ''}`}>
+                      <img 
+                        src={cs.image} 
+                        alt={cs.title} 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      {isEditMode && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="bg-white p-4 rounded-xl shadow-2xl w-64">
+                            <p className="text-[10px] font-bold uppercase text-gray-400 mb-2">Image URL</p>
+                            <input 
+                              type="text"
+                              value={cs.image}
+                              onChange={(e) => updateCaseStudy(cs.id, 'image', e.target.value)}
+                              className="text-xs p-2 border border-gray-200 rounded w-full outline-none focus:border-brand"
+                              placeholder="https://..."
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <h3 
+                        contentEditable={isEditMode}
+                        onBlur={(e) => updateCaseStudy(cs.id, 'title', e.currentTarget.innerText)}
+                        suppressContentEditableWarning
+                        className="text-3xl font-bold mb-2"
+                      >
+                        {cs.title}
+                      </h3>
+                      <p 
+                        contentEditable={isEditMode}
+                        onBlur={(e) => updateCaseStudy(cs.id, 'client', e.currentTarget.innerText)}
+                        suppressContentEditableWarning
+                        className="text-brand font-bold uppercase tracking-widest text-sm mb-8"
+                      >
+                        {cs.client}
+                      </p>
+                      
+                      <div className="space-y-8">
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">The Challenge</h4>
+                          <p 
+                            contentEditable={isEditMode}
+                            onBlur={(e) => updateCaseStudy(cs.id, 'challenge', e.currentTarget.innerText)}
+                            suppressContentEditableWarning
+                            className="text-gray-600 leading-relaxed"
+                          >
+                            {cs.challenge}
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">The Solution</h4>
+                          <p 
+                            contentEditable={isEditMode}
+                            onBlur={(e) => updateCaseStudy(cs.id, 'solution', e.currentTarget.innerText)}
+                            suppressContentEditableWarning
+                            className="text-gray-600 leading-relaxed"
+                          >
+                            {cs.solution}
+                          </p>
+                        </div>
+                        <div className="p-6 bg-brand/5 border-l-4 border-brand rounded-r-xl">
+                          <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">The Results</h4>
+                          <p 
+                            contentEditable={isEditMode}
+                            onBlur={(e) => updateCaseStudy(cs.id, 'results', e.currentTarget.innerText)}
+                            suppressContentEditableWarning
+                            className="text-lg font-bold text-black"
+                          >
+                            {cs.results}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+                
+                {isEditMode && (
+                  <button 
+                    onClick={addCaseStudy}
+                    className="w-full py-12 border-2 border-dashed border-gray-200 rounded-3xl text-gray-400 hover:border-brand hover:text-brand transition-all flex flex-col items-center justify-center"
+                  >
+                    <Plus size={48} className="mb-4" />
+                    <span className="font-bold uppercase tracking-widest text-sm">Add Case Study</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {currentView === 'experience' && (
+          <section id="experience" className="py-24 min-h-[70vh] bg-gray-50">
+            <div className="content-container">
+              <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 mb-4">My Journey</h2>
+              <h1 className="text-5xl md:text-7xl font-bold mb-16">Employment <span className="text-brand">History</span></h1>
+              
+              <div className="max-w-4xl space-y-12">
+                {(content.employmentHistory || []).map((job) => (
+                  <div key={job.id} className="relative pl-12 border-l-2 border-gray-200 group">
+                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-brand border-4 border-white shadow-sm"></div>
+                    {isEditMode && (
+                      <button 
+                        onClick={() => removeEmployment(job.id)}
+                        className="absolute top-0 right-0 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
+                      <div>
+                        <h3 
+                          contentEditable={isEditMode}
+                          onBlur={(e) => updateEmployment(job.id, 'role', e.currentTarget.innerText)}
+                          suppressContentEditableWarning
+                          className="text-2xl font-bold"
+                        >
+                          {job.role}
+                        </h3>
+                        <p 
+                          contentEditable={isEditMode}
+                          onBlur={(e) => updateEmployment(job.id, 'company', e.currentTarget.innerText)}
+                          suppressContentEditableWarning
+                          className="text-brand font-bold"
+                        >
+                          {job.company}
+                        </p>
+                      </div>
+                      <p 
+                        contentEditable={isEditMode}
+                        onBlur={(e) => updateEmployment(job.id, 'period', e.currentTarget.innerText)}
+                        suppressContentEditableWarning
+                        className="text-xs font-bold uppercase tracking-widest text-gray-400 mt-2 md:mt-0"
+                      >
+                        {job.period}
+                      </p>
+                    </div>
+                    <p 
+                      contentEditable={isEditMode}
+                      onBlur={(e) => updateEmployment(job.id, 'description', e.currentTarget.innerText)}
+                      suppressContentEditableWarning
+                      className="text-gray-600 leading-relaxed"
+                    >
+                      {job.description}
+                    </p>
+                  </div>
+                ))}
+                
+                {isEditMode && (
+                  <button 
+                    onClick={addEmployment}
+                    className="w-full py-8 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:border-brand hover:text-brand transition-all flex flex-col items-center justify-center"
+                  >
+                    <Plus size={32} className="mb-2" />
+                    <span className="font-bold uppercase tracking-widest text-xs">Add Experience</span>
+                  </button>
+                )}
               </div>
             </div>
           </section>

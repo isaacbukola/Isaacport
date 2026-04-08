@@ -36,7 +36,7 @@ service cloud.firestore {
     }
 
     function isValidContent(data) {
-      return data.keys().hasAll(['heroTitle', 'heroSub', 'portfolio', 'services', 'footerEmail', 'footerPhone', 'footerAddress', 'aboutText', 'aboutImage', 'upworkUrl', 'policies']) &&
+      return data.keys().hasAll(['heroTitle', 'heroSub', 'portfolio', 'services', 'footerEmail', 'footerPhone', 'footerAddress', 'aboutText', 'aboutImage', 'upworkUrl', 'policies', 'caseStudies', 'employmentHistory']) &&
              data.heroTitle is string && data.heroTitle.size() < 500 &&
              data.heroSub is string && data.heroSub.size() < 2000 &&
              data.portfolio is list &&
@@ -47,7 +47,9 @@ service cloud.firestore {
              data.aboutText is string && data.aboutText.size() < 5000 &&
              data.aboutImage is string &&
              data.upworkUrl is string &&
-             data.policies is list;
+             data.policies is list &&
+             data.caseStudies is list &&
+             data.employmentHistory is list;
     }
 
     // ===============================================================
