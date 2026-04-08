@@ -32,24 +32,23 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (request.auth.token.email == "isaacmason928@gmail.com" && request.auth.token.email_verified == true);
+        (request.auth.token.email == "isaacmason928@gmail.com" || request.auth.uid == "Elt2lWpo62ckJhTFAf2XCucuhmW2");
     }
 
     function isValidContent(data) {
-      return data.keys().hasAll(['heroTitle', 'heroSub', 'portfolio', 'services', 'footerEmail', 'footerPhone', 'footerAddress', 'aboutText', 'aboutImage', 'upworkUrl', 'policies', 'caseStudies', 'employmentHistory']) &&
-             data.heroTitle is string && data.heroTitle.size() < 500 &&
-             data.heroSub is string && data.heroSub.size() < 2000 &&
+      return data.heroTitle is string &&
+             data.heroSub is string &&
              data.portfolio is list &&
              data.services is list &&
              data.footerEmail is string &&
              data.footerPhone is string &&
              data.footerAddress is string &&
-             data.aboutText is string && data.aboutText.size() < 5000 &&
+             data.aboutText is string &&
              data.aboutImage is string &&
              data.upworkUrl is string &&
              data.policies is list &&
-             data.caseStudies is list &&
-             data.employmentHistory is list;
+             (!('caseStudies' in data) || data.caseStudies is list) &&
+             (!('employmentHistory' in data) || data.employmentHistory is list);
     }
 
     // ===============================================================

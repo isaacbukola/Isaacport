@@ -171,7 +171,8 @@ export default function App() {
       // Only update local state if we are NOT in edit mode
       // This prevents overwriting unsaved changes
       if (snapshot.exists() && !isEditMode) {
-        setContent(snapshot.data() as AppContent);
+        const data = snapshot.data();
+        setContent({ ...DEFAULT_CONTENT, ...data } as AppContent);
       } else if (!snapshot.exists()) {
         // If no data exists yet, use default
         setContent(DEFAULT_CONTENT);
