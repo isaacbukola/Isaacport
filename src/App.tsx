@@ -682,20 +682,112 @@ export default function App() {
         <AnimatePresence>
           {showMobileMenu && (
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="absolute top-full left-0 w-full bg-surface border-b border-white/5 md:hidden overflow-hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-bg/95 backdrop-blur-2xl z-[100] md:hidden flex flex-col"
             >
-              <div className="flex flex-col p-8 space-y-6 text-lg font-bold uppercase tracking-widest">
-                <button onClick={() => navigateTo('home')} className={currentView === 'home' ? 'text-brand' : 'text-gray-500'}>Home</button>
-                <button onClick={() => navigateTo('portfolio')} className={currentView === 'portfolio' ? 'text-brand' : 'text-gray-500'}>Portfolio</button>
-                <button onClick={() => navigateTo('case-studies')} className={currentView === 'case-studies' ? 'text-brand' : 'text-gray-500'}>Case Studies</button>
-                <button onClick={() => navigateTo('experience')} className={currentView === 'experience' ? 'text-brand' : 'text-gray-500'}>Experience</button>
-                <button onClick={() => navigateTo('services')} className={currentView === 'services' ? 'text-brand' : 'text-gray-500'}>Services</button>
-                <button onClick={() => navigateTo('about')} className={currentView === 'about' ? 'text-brand' : 'text-gray-500'}>About</button>
-                <button onClick={() => navigateTo('policies')} className={currentView === 'policies' ? 'text-brand' : 'text-gray-500'}>Policies</button>
-                <button onClick={() => navigateTo('contact')} className={currentView === 'contact' ? 'text-brand' : 'text-gray-500'}>Contact</button>
+              <div className="flex justify-between items-center p-8 border-b border-white/5">
+                <button 
+                  onClick={() => navigateTo('home')}
+                  className="text-2xl font-black tracking-tighter font-serif"
+                >
+                  ISAAC<span className="text-brand">WEB</span>
+                </button>
+                <button 
+                  onClick={() => setShowMobileMenu(false)}
+                  className="p-2 hover:bg-white/5 rounded-full transition-colors"
+                >
+                  <X size={32} className="text-gray-400" />
+                </button>
+              </div>
+
+              <div className="flex-grow overflow-y-auto px-8 py-12 flex flex-col">
+                <nav className="space-y-12">
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500">Main</p>
+                    <div className="flex flex-col space-y-6">
+                      <button 
+                        onClick={() => navigateTo('home')} 
+                        className={`text-4xl font-bold font-serif text-left transition-colors ${currentView === 'home' ? 'text-brand' : 'text-white'}`}
+                      >
+                        Home
+                      </button>
+                      <button 
+                        onClick={() => navigateTo('services')} 
+                        className={`text-4xl font-bold font-serif text-left transition-colors ${currentView === 'services' ? 'text-brand' : 'text-white'}`}
+                      >
+                        Services
+                      </button>
+                      <button 
+                        onClick={() => navigateTo('about')} 
+                        className={`text-4xl font-bold font-serif text-left transition-colors ${currentView === 'about' ? 'text-brand' : 'text-white'}`}
+                      >
+                        About
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500">Work</p>
+                    <div className="flex flex-col space-y-6">
+                      <button 
+                        onClick={() => navigateTo('portfolio')} 
+                        className={`text-4xl font-bold font-serif text-left transition-colors ${currentView === 'portfolio' ? 'text-brand' : 'text-white'}`}
+                      >
+                        Portfolio
+                      </button>
+                      <button 
+                        onClick={() => navigateTo('case-studies')} 
+                        className={`text-4xl font-bold font-serif text-left transition-colors ${currentView === 'case-studies' ? 'text-brand' : 'text-white'}`}
+                      >
+                        Case Studies
+                      </button>
+                      <button 
+                        onClick={() => navigateTo('experience')} 
+                        className={`text-4xl font-bold font-serif text-left transition-colors ${currentView === 'experience' ? 'text-brand' : 'text-white'}`}
+                      >
+                        Experience
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500">Legal & Contact</p>
+                    <div className="flex flex-col space-y-6">
+                      <button 
+                        onClick={() => navigateTo('policies')} 
+                        className={`text-4xl font-bold font-serif text-left transition-colors ${currentView === 'policies' ? 'text-brand' : 'text-white'}`}
+                      >
+                        Policies
+                      </button>
+                      <button 
+                        onClick={() => navigateTo('contact')} 
+                        className={`text-4xl font-bold font-serif text-left transition-colors ${currentView === 'contact' ? 'text-brand' : 'text-white'}`}
+                      >
+                        Contact
+                      </button>
+                    </div>
+                  </div>
+                </nav>
+
+                <div className="mt-24 pt-12 border-t border-white/5 space-y-8">
+                  <div className="grid grid-cols-1 gap-8">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Email</p>
+                      <p className="text-lg font-medium">{content.footerEmail}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Location</p>
+                      <p className="text-lg font-medium">{content.footerAddress}</p>
+                    </div>
+                  </div>
+                  <div className="flex space-x-6">
+                    <a href={content.upworkUrl} target="_blank" rel="noopener noreferrer" className="text-brand font-bold uppercase tracking-widest text-xs border-b border-brand pb-1">
+                      Upwork Profile
+                    </a>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
