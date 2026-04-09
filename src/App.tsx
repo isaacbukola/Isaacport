@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Save, Edit3, X, ExternalLink, Code, Search, Layout, Mail, Phone, MapPin, Menu, Zap, Database, ShoppingBag, Plus, Trash2, LogIn, LogOut, Loader2, FileCode, Eye, Briefcase, BookOpen, ThumbsUp, Clock, Users } from 'lucide-react';
+import { Save, Edit3, X, ExternalLink, Code, Search, Layout, Mail, Phone, MapPin, Menu, Zap, Database, ShoppingBag, Plus, Trash2, LogIn, LogOut, Loader2, FileCode, Eye, Briefcase, BookOpen, ThumbsUp, Clock, Users, ChevronDown } from 'lucide-react';
 import { db, auth, signIn, logout, OperationType, handleFirestoreError, signInEmail } from './firebase';
 import { doc, onSnapshot, setDoc, getDocFromServer } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -258,6 +258,18 @@ export default function App() {
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [selectedPlatform, setSelectedPlatform] = useState<string>('All');
   const [selectedBrand, setSelectedBrand] = useState<string>('All');
+  const [showWorkDropdown, setShowWorkDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowWorkDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const isAdmin = user?.email === 'isaacmason928@gmail.com';
 
@@ -581,9 +593,50 @@ export default function App() {
           </button>
           
           {/* Desktop Nav */}
-          <div className="hidden md:flex space-x-12 text-xs font-bold uppercase tracking-[0.2em] text-gray-400">
+          <div className="hidden md:flex items-center space-x-12 text-xs font-bold uppercase tracking-[0.2em] text-gray-400">
             <button onClick={() => navigateTo('services')} className={`hover:text-white transition-colors ${currentView === 'services' ? 'text-white' : ''}`}>Services</button>
-            <button onClick={() => navigateTo('portfolio')} className={`hover:text-white transition-colors ${currentView === 'portfolio' ? 'text-white' : ''}`}>Work</button>
+            
+            <div className="relative" ref={dropdownRef}>
+              <button 
+                onClick={() => setShowWorkDropdown(!showWorkDropdown)}
+                className={`flex items-center space-x-2 hover:text-white transition-colors ${['portfolio', 'case-studies', 'experience'].includes(currentView) ? 'text-white' : ''}`}
+              >
+                <span>Work</span>
+                <ChevronDown size={14} className={`transition-transform duration-300 ${showWorkDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              
+              <AnimatePresence>
+                {showWorkDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-full left-0 mt-4 w-64 bg-surface border border-white/5 rounded-sm shadow-2xl p-4 flex flex-col space-y-4 z-50"
+                  >
+                    <button 
+                      onClick={() => { navigateTo('portfolio'); setShowWorkDropdown(false); }}
+                      className={`text-left hover:text-brand transition-colors ${currentView === 'portfolio' ? 'text-brand' : ''}`}
+                    >
+                      Portfolio
+                    </button>
+                    <button 
+                      onClick={() => { navigateTo('case-studies'); setShowWorkDropdown(false); }}
+                      className={`text-left hover:text-brand transition-colors ${currentView === 'case-studies' ? 'text-brand' : ''}`}
+                    >
+                      Case Studies
+                    </button>
+                    <button 
+                      onClick={() => { navigateTo('experience'); setShowWorkDropdown(false); }}
+                      className={`text-left hover:text-brand transition-colors ${currentView === 'experience' ? 'text-brand' : ''}`}
+                    >
+                      Employment History
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <button onClick={() => navigateTo('about')} className={`hover:text-white transition-colors ${currentView === 'about' ? 'text-white' : ''}`}>About</button>
             <button onClick={() => navigateTo('policies')} className={`hover:text-white transition-colors ${currentView === 'policies' ? 'text-white' : ''}`}>Process</button>
           </div>
 
