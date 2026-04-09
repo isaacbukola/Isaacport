@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Save, Edit3, X, ExternalLink, Code, Search, Layout, Mail, Phone, MapPin, Menu, Zap, Database, ShoppingBag, Plus, Trash2, LogIn, LogOut, Loader2, FileCode, Eye, Briefcase, BookOpen } from 'lucide-react';
+import { Save, Edit3, X, ExternalLink, Code, Search, Layout, Mail, Phone, MapPin, Menu, Zap, Database, ShoppingBag, Plus, Trash2, LogIn, LogOut, Loader2, FileCode, Eye, Briefcase, BookOpen, ThumbsUp, Clock, Users } from 'lucide-react';
 import { db, auth, signIn, logout, OperationType, handleFirestoreError, signInEmail } from './firebase';
 import { doc, onSnapshot, setDoc, getDocFromServer } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -10,9 +10,17 @@ interface PortfolioItem {
   id: string;
   title: string;
   category: string;
+  platform: string;
+  brand: string;
   image: string;
   link?: string;
   htmlContent?: string;
+  stats?: {
+    label: string;
+    value: string;
+  }[];
+  badge?: string;
+  type?: string;
 }
 
 interface ServiceItem {
@@ -46,11 +54,20 @@ interface EmploymentHistory {
   description: string;
 }
 
+interface Pillar {
+  id: string;
+  title: string;
+  content: string;
+  icon: string;
+}
+
 interface AppContent {
   heroTitle: string;
   heroSub: string;
+  pillars: Pillar[];
   portfolio: PortfolioItem[];
   services: ServiceItem[];
+  techStack: string[];
   footerEmail: string;
   footerPhone: string;
   footerAddress: string;
@@ -60,68 +77,169 @@ interface AppContent {
   policies: PolicyItem[];
   caseStudies: CaseStudy[];
   employmentHistory: EmploymentHistory[];
+  platforms: string[];
 }
 
 // --- Default Content ---
 const DEFAULT_CONTENT: AppContent = {
-  heroTitle: "Crafting High-Conversion Digital Experiences.",
-  heroSub: "Specializing in high-end Wix development, SEO optimization, and intuitive UI/UX design for forward-thinking brands.",
+  heroTitle: "Architecting High-Performance Digital Ecosystems.",
+  heroSub: "I help high-stakes brands automate their operations and elevate their digital presence. Specializing in Service Automation, Luxury Art Galleries, and Corporate CRM Systems.",
+  pillars: [
+    { 
+      id: 'pill1', 
+      title: 'Service & Booking', 
+      content: 'Frictionless booking flows that reduce admin work by 40% for local service businesses.',
+      icon: 'Zap'
+    },
+    { 
+      id: 'pill2', 
+      title: 'Luxury & Art', 
+      content: 'Minimalist digital galleries designed to justify premium pricing and storytelling.',
+      icon: 'Layout'
+    },
+    { 
+      id: 'pill3', 
+      title: 'Systems & Integration', 
+      content: 'Deep HubSpot, API, and CRM integrations to turn your site into a 24/7 sales employee.',
+      icon: 'Database'
+    }
+  ],
   portfolio: [
-    { id: 'p1', title: 'Luxury Real Estate', category: 'Wix Development', image: 'https://picsum.photos/seed/realestate/800/600', link: 'https://www.wix.com' },
-    { id: 'p2', title: 'Modern E-commerce', category: 'UI/UX Design', image: 'https://picsum.photos/seed/shop/800/600', link: 'https://www.wix.com' },
-    { id: 'p3', title: 'Tech Startup', category: 'SEO Strategy', image: 'https://picsum.photos/seed/tech/800/600', link: 'https://www.wix.com' },
+    { 
+      id: 'p1', 
+      title: 'Residential Cleaning Hub', 
+      category: 'Service Automation', 
+      platform: 'Web Architecture', 
+      brand: 'CleanCo', 
+      image: 'https://picsum.photos/seed/cleaning/800/600', 
+      link: 'https://',
+      badge: 'Advanced Level',
+      type: 'Automation',
+      stats: [
+        { label: 'Conversion', value: '+45%' },
+        { label: 'Admin Time', value: '-12hrs/wk' },
+        { label: 'Users', value: '2.5k+' }
+      ]
+    },
+    { 
+      id: 'p2', 
+      title: 'Pulse to Palette Gallery', 
+      category: 'Luxury Art', 
+      platform: 'Shopify', 
+      brand: 'Artisan', 
+      image: 'https://picsum.photos/seed/gallery/800/600', 
+      link: 'https://',
+      badge: 'Premium Design',
+      type: 'E-commerce',
+      stats: [
+        { label: 'Sales', value: '+120%' },
+        { label: 'Load Time', value: '0.8s' },
+        { label: 'AOV', value: '$450' }
+      ]
+    },
+    { 
+      id: 'p3', 
+      title: 'UK Financial Advisor Site', 
+      category: 'Corporate CRM', 
+      platform: 'WordPress', 
+      brand: 'FinancePro', 
+      image: 'https://picsum.photos/seed/finance/800/600', 
+      link: 'https://',
+      badge: 'Enterprise',
+      type: 'CRM System',
+      stats: [
+        { label: 'Leads', value: '500+/mo' },
+        { label: 'Security', value: 'ISO 27001' },
+        { label: 'Uptime', value: '99.9%' }
+      ]
+    },
+    { 
+      id: 'p4', 
+      title: 'Diploma in Health and Social Care', 
+      category: 'LMS Platform', 
+      platform: 'Alison', 
+      brand: 'Alison', 
+      image: 'https://picsum.photos/seed/health/800/600', 
+      link: 'https://',
+      badge: 'Advanced Level',
+      type: 'Diploma',
+      stats: [
+        { label: 'Likes', value: '2.3k' },
+        { label: 'Duration', value: '10-15 hrs' },
+        { label: 'Learners', value: '87k' }
+      ]
+    },
+    { 
+      id: 'p5', 
+      title: 'Diploma in Workplace Safety', 
+      category: 'LMS Platform', 
+      platform: 'Alison', 
+      brand: 'Alison', 
+      image: 'https://picsum.photos/seed/safety/800/600', 
+      link: 'https://',
+      badge: 'Beginner Level',
+      type: 'Diploma',
+      stats: [
+        { label: 'Likes', value: '3.5k' },
+        { label: 'Duration', value: '6-10 hrs' },
+        { label: 'Learners', value: '195k' }
+      ]
+    },
+    { 
+      id: 'p6', 
+      title: 'Diploma in Nursing Care', 
+      category: 'LMS Platform', 
+      platform: 'Alison', 
+      brand: 'Alison', 
+      image: 'https://picsum.photos/seed/nursing/800/600', 
+      link: 'https://',
+      badge: 'Beginner Level',
+      type: 'Diploma',
+      stats: [
+        { label: 'Likes', value: '4.1k' },
+        { label: 'Duration', value: '10-15 hrs' },
+        { label: 'Learners', value: '346k' }
+      ]
+    },
+    { 
+      id: 'p7', 
+      title: 'Alzheimer\'s Patient Care', 
+      category: 'LMS Platform', 
+      platform: 'Alison', 
+      brand: 'Alison', 
+      image: 'https://picsum.photos/seed/care/800/600', 
+      link: 'https://',
+      badge: 'Advanced Level',
+      type: 'Diploma',
+      stats: [
+        { label: 'Likes', value: '308' },
+        { label: 'Duration', value: '10-15 hrs' },
+        { label: 'Learners', value: '10k' }
+      ]
+    }
   ],
   services: [
-    { id: 's1', title: 'Wix Development', description: 'Custom, high-performance websites built on the Wix platform with advanced Velo functionality.', icon: 'Code' },
-    { id: 's2', title: 'SEO Optimization', description: 'Data-driven strategies to improve your search rankings and drive organic traffic to your site.', icon: 'Search' },
-    { id: 's3', title: 'UI/UX Design', description: 'Beautiful, user-centric interfaces designed to convert visitors into loyal customers.', icon: 'Layout' },
-    { id: 's4', title: 'Wix Automation', description: 'Streamline your business workflows with custom Wix automations and third-party integrations.', icon: 'Zap' },
-    { id: 's5', title: 'Wix CMS', description: 'Advanced content management solutions using Wix Data and Dynamic Pages for scalable sites.', icon: 'Database' },
-    { id: 's6', title: 'Wix Store Setup', description: 'Complete e-commerce solutions including product configuration, payment gateways, and shipping.', icon: 'ShoppingBag' },
+    { id: 's1', title: 'Web Architecture', description: 'Custom, high-performance ecosystems built with advanced functionality.', icon: 'Code' },
+    { id: 's2', title: 'CRM & API Integration', description: 'Deep HubSpot, Stripe, and custom API integrations for seamless business operations.', icon: 'Database' },
+    { id: 's3', title: 'Conversion Optimization', description: 'Data-driven UI/UX design focused on turning visitors into high-value leads.', icon: 'Zap' },
   ],
-  footerEmail: "hello@websiteexpert.com",
+  techStack: ['React', 'TypeScript', 'HubSpot', 'Stripe', 'POPIA Compliance'],
+  footerEmail: "isaac@isaacweb.com",
   footerPhone: "+1 (555) 000-0000",
-  footerAddress: "123 Digital Ave, Creative City, ST 12345",
-  aboutText: "Bukola I. is a certified Wix Expert and Velo Specialist based in Lagos, Nigeria. With a perfect 100% Job Success Score and 'Elite Professional' status on Upwork, Bukola specializes in creating high-performing, custom-coded websites. With over two years of experience, they offer comprehensive services across Wix, WordPress, and Shopify, combining technical expertise in Velo development with strategic skills in SEO and lead generation to help businesses thrive online.",
-  aboutImage: "https://picsum.photos/seed/bukola/600/800",
-  upworkUrl: "https://www.upwork.com/freelancers/~0165dad1c178243d4b?mp_source=share",
+  footerAddress: "London, United Kingdom",
+  aboutText: "Isaac is a Senior Web Architect specializing in high-performance digital ecosystems. With a focus on automation and luxury design, he helps brands scale their operations through intelligent web systems. His approach combines technical expertise with strategic conversion copywriting to deliver results that justify premium positioning.",
+  aboutImage: "https://picsum.photos/seed/isaac/600/800",
+  upworkUrl: "https://www.upwork.com/freelancers/~0165dad1c178243d4b",
   policies: [
     {
       id: 'pol1',
-      title: 'Project Alignment Policy',
-      content: 'To ensure I am the perfect fit for your vision, I prefer to conduct a thorough discovery phase and provide a clear project roadmap before we officially begin the contract. This ensures that both parties are 100% aligned on the goals and deliverables before any financial commitment is made.'
-    },
-    {
-      id: 'pol2',
-      title: 'Revision & Feedback Policy',
-      content: 'Your satisfaction is my priority. Every project includes 3 rounds of major revisions. This allows us to fine-tune the design and functionality until it is exactly what you need, while keeping the project on schedule.'
-    },
-    {
-      id: 'pol3',
-      title: 'Communication & Response Policy',
-      content: 'I believe clear communication is the key to a successful project. I am available for updates and discussions during regular business hours (9 AM - 6 PM GMT+1). I aim to respond to all inquiries within 24 hours.'
+      title: 'Project Alignment',
+      content: 'I conduct a thorough discovery phase to ensure 100% alignment on goals before any contract begins.'
     }
   ],
-  caseStudies: [
-    {
-      id: 'cs1',
-      title: 'E-commerce Conversion Boost',
-      client: 'Fashion Retailer',
-      challenge: 'The client was experiencing high bounce rates and low mobile conversion on their existing Wix store.',
-      solution: 'I implemented a custom Velo-powered filtering system and optimized the mobile checkout flow for speed and simplicity.',
-      results: '35% increase in mobile conversions and a 20% reduction in bounce rate within the first 3 months.',
-      image: 'https://picsum.photos/seed/case1/800/600'
-    }
-  ],
-  employmentHistory: [
-    {
-      id: 'eh1',
-      role: 'Senior Wix & Velo Developer',
-      company: 'Freelance / Upwork',
-      period: '2021 - Present',
-      description: 'Developed over 50+ custom Wix websites for global clients, specializing in complex Velo integrations and SEO optimization.'
-    }
-  ]
+  caseStudies: [],
+  employmentHistory: [],
+  platforms: ['React', 'TypeScript', 'HubSpot', 'Stripe', 'POPIA Compliance']
 };
 
 export default function App() {
@@ -138,8 +256,19 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState('');
   const [loginMethod, setLoginMethod] = useState<'google' | 'email'>('google');
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [selectedPlatform, setSelectedPlatform] = useState<string>('All');
+  const [selectedBrand, setSelectedBrand] = useState<string>('All');
 
   const isAdmin = user?.email === 'isaacmason928@gmail.com';
+
+  const filteredPortfolio = content.portfolio.filter(item => {
+    const platformMatch = selectedPlatform === 'All' || item.platform === selectedPlatform;
+    const brandMatch = selectedBrand === 'All' || item.brand === selectedBrand;
+    return platformMatch && brandMatch;
+  });
+
+  const uniquePlatforms = ['All', ...new Set(content.portfolio.map(item => item.platform))];
+  const uniqueBrands = ['All', ...new Set(content.portfolio.map(item => item.brand))];
 
   // Test connection to Firestore
   useEffect(() => {
@@ -172,7 +301,18 @@ export default function App() {
       // This prevents overwriting unsaved changes
       if (snapshot.exists() && !isEditMode) {
         const data = snapshot.data();
-        setContent({ ...DEFAULT_CONTENT, ...data } as AppContent);
+        setContent({ 
+          ...DEFAULT_CONTENT, 
+          ...data,
+          portfolio: data.portfolio || DEFAULT_CONTENT.portfolio,
+          services: data.services || DEFAULT_CONTENT.services,
+          policies: data.policies || DEFAULT_CONTENT.policies,
+          caseStudies: data.caseStudies || DEFAULT_CONTENT.caseStudies,
+          employmentHistory: data.employmentHistory || DEFAULT_CONTENT.employmentHistory,
+          platforms: data.platforms || DEFAULT_CONTENT.platforms,
+          pillars: data.pillars || DEFAULT_CONTENT.pillars,
+          techStack: data.techStack || DEFAULT_CONTENT.techStack
+        } as AppContent);
       } else if (!snapshot.exists()) {
         // If no data exists yet, use default
         setContent(DEFAULT_CONTENT);
@@ -345,6 +485,8 @@ export default function App() {
       id: `p${Date.now()}`,
       title: 'New Project',
       category: 'Category',
+      platform: 'Platform',
+      brand: 'Brand',
       image: 'https://picsum.photos/seed/new/800/600',
       link: 'https://'
     };
@@ -415,28 +557,34 @@ export default function App() {
     setContent(prev => ({ ...prev, employmentHistory: (prev.employmentHistory || []).filter(item => item.id !== id) }));
   };
 
+  const addPlatform = () => {
+    const name = prompt("Enter platform name:");
+    if (name) {
+      setContent(prev => ({ ...prev, platforms: [...(prev.platforms || []), name] }));
+    }
+  };
+
+  const removePlatform = (index: number) => {
+    setContent(prev => ({ ...prev, platforms: (prev.platforms || []).filter((_, i) => i !== index) }));
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navigation */}
-      <nav className="w-full border-b border-gray-100 py-8 sticky top-0 bg-white/80 backdrop-blur-md z-40">
+      <nav className="w-full border-b border-white/5 py-8 sticky top-0 bg-bg/80 backdrop-blur-xl z-40">
         <div className="content-container flex justify-between items-center">
           <button 
             onClick={() => navigateTo('home')}
-            className="text-2xl font-extrabold tracking-tighter"
+            className="text-2xl font-black tracking-tighter font-serif"
           >
-            WEBSITE<span className="text-brand">.</span>EXPERT
+            ISAAC<span className="text-brand">WEB</span>
           </button>
           
           {/* Desktop Nav */}
-          <div className="hidden md:flex space-x-12 text-sm font-medium uppercase tracking-widest text-gray-500">
-            <button onClick={() => navigateTo('home')} className={`hover:text-black transition-colors ${currentView === 'home' ? 'text-black' : ''}`}>Home</button>
-            <button onClick={() => navigateTo('portfolio')} className={`hover:text-black transition-colors ${currentView === 'portfolio' ? 'text-black' : ''}`}>Portfolio</button>
-            <button onClick={() => navigateTo('case-studies')} className={`hover:text-black transition-colors ${currentView === 'case-studies' ? 'text-black' : ''}`}>Case Studies</button>
-            <button onClick={() => navigateTo('experience')} className={`hover:text-black transition-colors ${currentView === 'experience' ? 'text-black' : ''}`}>Experience</button>
-            <button onClick={() => navigateTo('services')} className={`hover:text-black transition-colors ${currentView === 'services' ? 'text-black' : ''}`}>Services</button>
-            <button onClick={() => navigateTo('about')} className={`hover:text-black transition-colors ${currentView === 'about' ? 'text-black' : ''}`}>About</button>
-            <button onClick={() => navigateTo('policies')} className={`hover:text-black transition-colors ${currentView === 'policies' ? 'text-black' : ''}`}>Policies</button>
-            <button onClick={() => navigateTo('contact')} className={`hover:text-black transition-colors ${currentView === 'contact' ? 'text-black' : ''}`}>Contact</button>
+          <div className="hidden md:flex space-x-12 text-xs font-bold uppercase tracking-[0.2em] text-gray-400">
+            <button onClick={() => navigateTo('services')} className={`hover:text-white transition-colors ${currentView === 'services' ? 'text-white' : ''}`}>Services</button>
+            <button onClick={() => navigateTo('portfolio')} className={`hover:text-white transition-colors ${currentView === 'portfolio' ? 'text-white' : ''}`}>Work</button>
+            <button onClick={() => navigateTo('policies')} className={`hover:text-white transition-colors ${currentView === 'policies' ? 'text-white' : ''}`}>Process</button>
           </div>
 
           <div className="flex items-center space-x-4">
@@ -444,14 +592,14 @@ export default function App() {
               <div className="flex items-center space-x-2">
                 <button 
                   onClick={() => setIsEditMode(!isEditMode)}
-                  className={`p-2 rounded-full transition-colors ${isEditMode ? 'bg-brand text-black' : 'hover:bg-gray-100 text-gray-400'}`}
+                  className={`p-2 rounded-full transition-colors ${isEditMode ? 'bg-brand text-bg' : 'hover:bg-white/5 text-gray-500'}`}
                   title={isEditMode ? "Exit Edit Mode" : "Enter Edit Mode"}
                 >
                   <Edit3 size={18} />
                 </button>
                 <button 
                   onClick={handleLogout}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
+                  className="p-2 hover:bg-white/5 rounded-full transition-colors text-gray-500"
                   title="Logout"
                 >
                   <LogOut size={18} />
@@ -460,19 +608,19 @@ export default function App() {
             ) : (
               <button 
                 onClick={() => setShowLoginModal(true)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 hover:bg-white/5 rounded-full transition-colors"
                 title="Admin Login"
               >
-                <LogIn size={18} className="text-gray-400" />
+                <LogIn size={18} className="text-gray-500" />
               </button>
             )}
             
             {/* Mobile Menu Toggle */}
             <button 
               onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="md:hidden p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="md:hidden p-2 hover:bg-white/5 rounded-full transition-colors"
             >
-              {showMobileMenu ? <X size={24} /> : <Menu size={24} />}
+              {showMobileMenu ? <X size={24} className="text-gray-500" /> : <Menu size={24} className="text-gray-500" />}
             </button>
           </div>
         </div>
@@ -484,17 +632,17 @@ export default function App() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="absolute top-full left-0 w-full bg-white border-b border-gray-100 md:hidden overflow-hidden"
+              className="absolute top-full left-0 w-full bg-surface border-b border-white/5 md:hidden overflow-hidden"
             >
               <div className="flex flex-col p-8 space-y-6 text-lg font-bold uppercase tracking-widest">
-                <button onClick={() => navigateTo('home')} className={currentView === 'home' ? 'text-brand' : 'text-gray-400'}>Home</button>
-                <button onClick={() => navigateTo('portfolio')} className={currentView === 'portfolio' ? 'text-brand' : 'text-gray-400'}>Portfolio</button>
-                <button onClick={() => navigateTo('case-studies')} className={currentView === 'case-studies' ? 'text-brand' : 'text-gray-400'}>Case Studies</button>
-                <button onClick={() => navigateTo('experience')} className={currentView === 'experience' ? 'text-brand' : 'text-gray-400'}>Experience</button>
-                <button onClick={() => navigateTo('services')} className={currentView === 'services' ? 'text-brand' : 'text-gray-400'}>Services</button>
-                <button onClick={() => navigateTo('about')} className={currentView === 'about' ? 'text-brand' : 'text-gray-400'}>About</button>
-                <button onClick={() => navigateTo('policies')} className={currentView === 'policies' ? 'text-brand' : 'text-gray-400'}>Policies</button>
-                <button onClick={() => navigateTo('contact')} className={currentView === 'contact' ? 'text-brand' : 'text-gray-400'}>Contact</button>
+                <button onClick={() => navigateTo('home')} className={currentView === 'home' ? 'text-brand' : 'text-gray-500'}>Home</button>
+                <button onClick={() => navigateTo('portfolio')} className={currentView === 'portfolio' ? 'text-brand' : 'text-gray-500'}>Portfolio</button>
+                <button onClick={() => navigateTo('case-studies')} className={currentView === 'case-studies' ? 'text-brand' : 'text-gray-500'}>Case Studies</button>
+                <button onClick={() => navigateTo('experience')} className={currentView === 'experience' ? 'text-brand' : 'text-gray-500'}>Experience</button>
+                <button onClick={() => navigateTo('services')} className={currentView === 'services' ? 'text-brand' : 'text-gray-500'}>Services</button>
+                <button onClick={() => navigateTo('about')} className={currentView === 'about' ? 'text-brand' : 'text-gray-500'}>About</button>
+                <button onClick={() => navigateTo('policies')} className={currentView === 'policies' ? 'text-brand' : 'text-gray-500'}>Policies</button>
+                <button onClick={() => navigateTo('contact')} className={currentView === 'contact' ? 'text-brand' : 'text-gray-500'}>Contact</button>
               </div>
             </motion.div>
           )}
@@ -505,60 +653,234 @@ export default function App() {
         {currentView === 'home' && (
           <>
             {/* Hero Section */}
-            <section className="py-24 md:py-40">
-              <div className="content-container">
+            <section className="py-32 md:py-56 relative overflow-hidden">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.05)_0%,transparent_70%)] pointer-events-none"></div>
+              <div className="content-container relative z-10">
                 <motion.h1 
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   contentEditable={isEditMode}
                   onBlur={(e) => updateContent('heroTitle', e.currentTarget.innerText)}
                   suppressContentEditableWarning
-                  className="text-5xl md:text-8xl font-bold leading-[0.9] tracking-tight mb-8"
+                  className="text-5xl md:text-8xl font-bold leading-[1.1] tracking-tight mb-10 font-serif max-w-5xl"
                 >
                   {content.heroTitle}
                 </motion.h1>
                 <motion.p 
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
                   contentEditable={isEditMode}
                   onBlur={(e) => updateContent('heroSub', e.currentTarget.innerText)}
                   suppressContentEditableWarning
-                  className="text-xl md:text-2xl text-gray-500 max-w-3xl font-light leading-relaxed"
+                  className="text-xl md:text-2xl text-gray-400 max-w-3xl font-light leading-relaxed mb-16"
                 >
                   {content.heroSub}
                 </motion.p>
                 <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="mt-12"
+                  className="flex flex-col sm:flex-row gap-6"
                 >
-                  <button 
-                    onClick={() => setCurrentView('portfolio')}
-                    className="bg-brand text-black px-12 py-6 text-xl font-bold hover:scale-105 transition-transform"
+                  <a 
+                    href={content.upworkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-brand text-bg px-10 py-5 text-lg font-bold hover:bg-brand/90 transition-all rounded-sm text-center"
                   >
-                    View Portfolio
+                    Book Strategy Call
+                  </a>
+                  <button 
+                    onClick={() => navigateTo('portfolio')}
+                    className="border border-white/10 text-white px-10 py-5 text-lg font-bold hover:bg-white/5 transition-all rounded-sm"
+                  >
+                    View My Work
                   </button>
                 </motion.div>
+              </div>
+            </section>
+
+            {/* Three Pillars Section */}
+            <section className="py-24 border-t border-white/5">
+              <div className="content-container">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {content.pillars.map((pillar) => (
+                    <div key={pillar.id} className="bg-surface p-10 rounded-sm border border-white/5 hover:border-brand/30 transition-all group">
+                      <div className="w-12 h-12 bg-brand/10 text-brand flex items-center justify-center mb-8 rounded-sm">
+                        {pillar.icon === 'Zap' && <Zap size={24} />}
+                        {pillar.icon === 'Layout' && <Layout size={24} />}
+                        {pillar.icon === 'Database' && <Database size={24} />}
+                      </div>
+                      <h3 
+                        contentEditable={isEditMode}
+                        onBlur={(e) => {
+                          const newPillars = content.pillars.map(p => p.id === pillar.id ? { ...p, title: e.currentTarget.innerText } : p);
+                          updateContent('pillars', newPillars);
+                        }}
+                        suppressContentEditableWarning
+                        className="text-2xl font-bold mb-4 font-serif"
+                      >
+                        {pillar.title}
+                      </h3>
+                      <p 
+                        contentEditable={isEditMode}
+                        onBlur={(e) => {
+                          const newPillars = content.pillars.map(p => p.id === pillar.id ? { ...p, content: e.currentTarget.innerText } : p);
+                          updateContent('pillars', newPillars);
+                        }}
+                        suppressContentEditableWarning
+                        className="text-gray-400 leading-relaxed"
+                      >
+                        {pillar.content}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* Portfolio Section */}
+            <section id="work" className="py-24 border-t border-white/5 bg-bg">
+              <div className="content-container">
+                <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+                  <div>
+                    <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-brand mb-4">Selected Work</h2>
+                    <h3 className="text-4xl md:text-6xl font-bold font-serif">Web Masterpieces</h3>
+                  </div>
+                  <button 
+                    onClick={() => navigateTo('portfolio')}
+                    className="text-sm font-bold uppercase tracking-widest border-b border-brand pb-1 hover:text-brand transition-colors"
+                  >
+                    View All Projects
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                  {content.portfolio.slice(0, 3).map((item, index) => (
+                    <motion.div 
+                      key={item.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.1 }}
+                      className="group"
+                    >
+                      <div className="aspect-[4/5] overflow-hidden bg-surface mb-6 relative rounded-sm">
+                        <img 
+                          src={item.image} 
+                          alt={item.title}
+                          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 bg-bg/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center p-8">
+                          <div className="text-center">
+                            <p className="text-brand text-xs font-bold uppercase tracking-widest mb-2">{item.category}</p>
+                            <h4 className="text-2xl font-bold font-serif mb-6">{item.title}</h4>
+                            <a 
+                              href={item.link} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center space-x-2 text-sm font-bold uppercase tracking-widest border border-white/20 px-6 py-3 hover:bg-white hover:text-bg transition-all text-white"
+                            >
+                              <span>View Project</span>
+                              <ExternalLink size={14} />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* Tech Stack Section */}
+            <section className="py-20 border-t border-white/5 bg-surface/30">
+              <div className="content-container">
+                <div className="flex flex-wrap justify-center items-center gap-12 md:gap-24 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700">
+                  {content.techStack.map((tech, index) => (
+                    <span key={index} className="text-xl md:text-2xl font-bold tracking-tighter uppercase">{tech}</span>
+                  ))}
+                </div>
               </div>
             </section>
           </>
         )}
 
         {currentView === 'portfolio' && (
-          <section id="work" className="py-24 bg-gray-50 min-h-[70vh]">
+          <section id="work" className="py-24 bg-bg min-h-[70vh]">
             <div className="content-container">
               <div className="flex justify-between items-end mb-16">
                 <div>
-                  <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 mb-4">Selected Work</h2>
-                  <h3 className="text-4xl font-bold">Wix Masterpieces</h3>
+                  <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-500 mb-4">Selected Work</h2>
+                  <h3 className="text-4xl font-bold font-serif">Web Masterpieces</h3>
                 </div>
-                <div className="hidden md:block h-[1px] flex-grow mx-12 bg-gray-200"></div>
+                <div className="hidden md:block h-[1px] flex-grow mx-12 bg-white/5"></div>
+              </div>
+
+              <div className="flex flex-col md:flex-row gap-12 mb-16 p-8 bg-surface/50 border border-white/5 rounded-sm">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-4 text-gray-500">
+                    <Layout size={14} />
+                    <p className="text-[10px] font-bold uppercase tracking-widest">Filter by Platform</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {uniquePlatforms.map(platform => (
+                      <button
+                        key={platform}
+                        onClick={() => setSelectedPlatform(platform)}
+                        className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-sm border transition-all ${
+                          selectedPlatform === platform 
+                            ? 'bg-brand border-brand text-bg' 
+                            : 'border-white/10 text-gray-400 hover:border-white/30'
+                        }`}
+                      >
+                        {platform}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="hidden md:block w-[1px] bg-white/5"></div>
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-4 text-gray-500">
+                    <Briefcase size={14} />
+                    <p className="text-[10px] font-bold uppercase tracking-widest">Filter by Brand</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {uniqueBrands.map(brand => (
+                      <button
+                        key={brand}
+                        onClick={() => setSelectedBrand(brand)}
+                        className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-sm border transition-all ${
+                          selectedBrand === brand 
+                            ? 'bg-brand border-brand text-bg' 
+                            : 'border-white/10 text-gray-400 hover:border-white/30'
+                        }`}
+                      >
+                        {brand}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {(selectedPlatform !== 'All' || selectedBrand !== 'All') && (
+                  <div className="flex items-end">
+                    <button 
+                      onClick={() => {
+                        setSelectedPlatform('All');
+                        setSelectedBrand('All');
+                      }}
+                      className="text-[10px] font-bold uppercase tracking-widest text-brand hover:text-white transition-colors flex items-center space-x-2"
+                    >
+                      <X size={14} />
+                      <span>Clear All</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {content.portfolio.map((item, index) => (
+                {filteredPortfolio.map((item, index) => (
                   <motion.div 
                     key={item.id}
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -567,7 +889,17 @@ export default function App() {
                     transition={{ delay: index * 0.1 }}
                     className="group relative"
                   >
-                    <div className="aspect-[4/3] overflow-hidden bg-gray-200 mb-6 relative">
+                    <div className="aspect-[4/3] overflow-hidden bg-surface mb-6 relative rounded-sm group">
+                      {item.badge && (
+                        <div className="absolute top-4 left-4 z-10 bg-brand/90 text-bg text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full backdrop-blur-sm">
+                          {item.badge}
+                        </div>
+                      )}
+                      {item.type && (
+                        <div className="absolute top-4 right-4 z-10 bg-black/60 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-sm backdrop-blur-sm border border-white/10">
+                          {item.type}
+                        </div>
+                      )}
                       <a 
                         href={item.link || '#'} 
                         target="_blank" 
@@ -580,25 +912,23 @@ export default function App() {
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                           referrerPolicy="no-referrer"
                         />
-                        {item.link && (
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <div className="bg-brand text-black p-3 rounded-full">
-                              <ExternalLink size={20} />
-                            </div>
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className="bg-brand text-bg p-3 rounded-full">
+                            <ExternalLink size={20} />
                           </div>
-                        )}
+                        </div>
                       </a>
                       {isEditMode && (
-                        <div className="absolute top-4 right-4 flex flex-col space-y-2 z-20">
+                        <div className="absolute top-16 right-4 flex flex-col space-y-2 z-20">
                           <div className="flex space-x-2">
-                            <label className="bg-white p-2 rounded shadow-lg cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-center" title="Upload Image">
+                            <label className="bg-surface p-2 rounded shadow-lg cursor-pointer hover:bg-white/10 transition-colors flex items-center justify-center border border-white/10" title="Upload Image">
                               <input 
                                 type="file" 
                                 accept="image/*"
                                 onChange={(e) => handleImageUpload(e, (base64) => updatePortfolioItem(item.id, 'image', base64))}
                                 className="hidden"
                               />
-                              <Edit3 size={14} className="text-gray-600" />
+                              <Edit3 size={14} className="text-gray-400" />
                             </label>
                             <label className="bg-brand p-2 rounded shadow-lg cursor-pointer hover:bg-brand/90 transition-colors flex items-center justify-center" title="Upload HTML Design">
                               <input 
@@ -607,7 +937,7 @@ export default function App() {
                                 onChange={(e) => handleHtmlUpload(e, item.id)}
                                 className="hidden"
                               />
-                              <FileCode size={14} className="text-black" />
+                              <FileCode size={14} className="text-bg" />
                             </label>
                             <button 
                               onClick={() => removePortfolioItem(item.id)}
@@ -617,41 +947,71 @@ export default function App() {
                               <X size={14} />
                             </button>
                           </div>
-                          <div className="bg-white p-2 rounded shadow-lg">
-                            <p className="text-[10px] font-bold uppercase text-gray-400 mb-1">Image URL</p>
-                            <input 
-                              type="text"
-                              value={item.image}
-                              onChange={(e) => updatePortfolioItem(item.id, 'image', e.target.value)}
-                              className="text-[10px] p-1 border border-gray-200 rounded w-32 outline-none focus:border-brand"
-                              placeholder="https://..."
-                            />
-                          </div>
                         </div>
                       )}
                     </div>
-                    <div className="flex justify-between items-start">
-                      <div className="flex-grow">
-                        <h4 
-                          contentEditable={isEditMode}
-                          onBlur={(e) => updatePortfolioItem(item.id, 'title', e.currentTarget.innerText)}
-                          suppressContentEditableWarning
-                          className="text-xl font-bold mb-1"
+                    <div className="flex flex-col">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex-grow">
+                          <h4 
+                            contentEditable={isEditMode}
+                            onBlur={(e) => updatePortfolioItem(item.id, 'title', e.currentTarget.innerText)}
+                            suppressContentEditableWarning
+                            className="text-xl font-bold mb-1 group-hover:text-brand transition-colors"
+                          >
+                            {item.title}
+                          </h4>
+                          <p 
+                            contentEditable={isEditMode}
+                            onBlur={(e) => updatePortfolioItem(item.id, 'category', e.currentTarget.innerText)}
+                            suppressContentEditableWarning
+                            className="text-xs text-gray-400 uppercase tracking-widest"
+                          >
+                            {item.category}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4 py-4 border-y border-white/5 mb-6">
+                        {item.stats?.map((stat, i) => (
+                          <div key={i} className="flex flex-col">
+                            <div className="flex items-center space-x-1 mb-1 text-gray-500">
+                              {stat.label.toLowerCase().includes('like') && <ThumbsUp size={10} />}
+                              {stat.label.toLowerCase().includes('duration') && <Clock size={10} />}
+                              {stat.label.toLowerCase().includes('user') || stat.label.toLowerCase().includes('learner') ? <Users size={10} /> : null}
+                              <span className="text-[9px] font-bold uppercase tracking-widest">{stat.label}</span>
+                            </div>
+                            <span className="text-xs font-bold text-white">{stat.value}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center justify-between gap-4">
+                        <button className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border border-white/10 rounded-sm hover:bg-white/5 transition-all">
+                          More Info
+                        </button>
+                        <a 
+                          href={item.link || '#'} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest bg-brand text-bg rounded-sm hover:bg-brand/90 transition-all text-center"
                         >
-                          {item.title}
-                        </h4>
-                        <p 
-                          contentEditable={isEditMode}
-                          onBlur={(e) => updatePortfolioItem(item.id, 'category', e.currentTarget.innerText)}
-                          suppressContentEditableWarning
-                          className="text-sm text-gray-400 uppercase tracking-widest"
-                        >
-                          {item.category}
-                        </p>
+                          Start Project
+                        </a>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 mt-6">
+                        <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-1 bg-white/5 rounded text-gray-500">
+                          Platform: {item.platform}
+                        </span>
+                        <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-1 bg-white/5 rounded text-gray-500">
+                          Brand: {item.brand}
+                        </span>
+                      </div>
                         {item.htmlContent && (
                           <button 
                             onClick={() => setPreviewHtml(item.htmlContent || null)}
-                            className="mt-4 flex items-center space-x-2 text-xs font-bold uppercase tracking-widest text-brand hover:text-black transition-colors"
+                            className="mt-4 flex items-center space-x-2 text-xs font-bold uppercase tracking-widest text-brand hover:text-white transition-colors"
                           >
                             <Eye size={14} />
                             <span>View Design</span>
@@ -660,18 +1020,37 @@ export default function App() {
                       </div>
                       {isEditMode && (
                         <div className="ml-4 flex flex-col items-end">
-                          <p className="text-[10px] font-bold uppercase text-gray-400 mb-1">Live Link</p>
+                          <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">Live Link</p>
                           <input 
                             type="text"
                             value={item.link || ''}
                             onChange={(e) => updatePortfolioItem(item.id, 'link', e.target.value)}
-                            className="text-xs p-1 border border-gray-200 rounded w-32 outline-none focus:border-brand"
+                            className="text-xs p-1 bg-bg border border-white/10 rounded w-32 outline-none focus:border-brand text-white"
                             placeholder="https://..."
                           />
+                          <div className="mt-4 grid grid-cols-1 gap-2">
+                            <div>
+                              <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">Platform</p>
+                              <input 
+                                type="text"
+                                value={item.platform}
+                                onChange={(e) => updatePortfolioItem(item.id, 'platform', e.target.value)}
+                                className="text-[10px] p-1 bg-bg border border-white/10 rounded w-32 outline-none focus:border-brand text-white"
+                              />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">Brand</p>
+                              <input 
+                                type="text"
+                                value={item.brand}
+                                onChange={(e) => updatePortfolioItem(item.id, 'brand', e.target.value)}
+                                className="text-[10px] p-1 bg-bg border border-white/10 rounded w-32 outline-none focus:border-brand text-white"
+                              />
+                            </div>
+                          </div>
                         </div>
                       )}
-                    </div>
-                  </motion.div>
+                    </motion.div>
                 ))}
                 {isEditMode && (
                   <button 
@@ -688,7 +1067,7 @@ export default function App() {
         )}
 
         {currentView === 'about' && (
-          <section id="about" className="py-24 bg-white min-h-[70vh]">
+          <section id="about" className="py-24 bg-bg min-h-[70vh]">
             <div className="content-container">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
                 <motion.div 
@@ -696,18 +1075,18 @@ export default function App() {
                   animate={{ opacity: 1, x: 0 }}
                   className="relative"
                 >
-                  <div className="aspect-[3/4] bg-gray-100 overflow-hidden rounded-2xl relative">
+                  <div className="aspect-[3/4] bg-surface overflow-hidden rounded-sm relative border border-white/5">
                     <img 
                       src={content.aboutImage} 
-                      alt="Bukola I." 
-                      className="w-full h-full object-cover"
+                      alt="Isaac" 
+                      className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700"
                       referrerPolicy="no-referrer"
                     />
                     {isEditMode && (
-                      <div className="absolute bottom-4 left-4 right-4 bg-white p-4 rounded-xl shadow-2xl">
-                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Profile Photo</p>
+                      <div className="absolute bottom-4 left-4 right-4 bg-surface p-4 rounded-sm shadow-2xl border border-white/10">
+                        <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Profile Photo</p>
                         <div className="flex flex-col space-y-4">
-                          <label className="w-full flex items-center justify-center p-4 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:border-brand hover:bg-brand/5 transition-all">
+                          <label className="w-full flex items-center justify-center p-4 border-2 border-dashed border-white/10 rounded-sm cursor-pointer hover:border-brand hover:bg-brand/5 transition-all">
                             <input 
                               type="file" 
                               accept="image/*"
@@ -715,17 +1094,17 @@ export default function App() {
                               className="hidden"
                             />
                             <div className="flex flex-col items-center">
-                              <Edit3 size={20} className="text-gray-400 mb-1" />
-                              <span className="text-xs font-bold text-gray-400">Upload File</span>
+                              <Edit3 size={20} className="text-gray-500 mb-1" />
+                              <span className="text-xs font-bold text-gray-500">Upload File</span>
                             </div>
                           </label>
                           <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-gray-400 uppercase mb-1">Or Paste Image URL</span>
+                            <span className="text-[10px] font-bold text-gray-500 uppercase mb-1">Or Paste Image URL</span>
                             <input 
                               type="text"
                               value={content.aboutImage}
                               onChange={(e) => updateContent('aboutImage', e.target.value)}
-                              className="text-xs p-2 border border-gray-200 rounded outline-none focus:border-brand"
+                              className="text-xs p-2 bg-bg border border-white/10 rounded-sm outline-none focus:border-brand text-white"
                               placeholder="https://..."
                             />
                           </div>
@@ -733,7 +1112,7 @@ export default function App() {
                       </div>
                     )}
                   </div>
-                  <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-brand rounded-full flex items-center justify-center font-bold text-center p-4 leading-tight transform rotate-12">
+                  <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-brand rounded-full flex items-center justify-center font-bold text-center p-4 leading-tight transform rotate-12 text-bg">
                     100% Success Score
                   </div>
                 </motion.div>
@@ -741,28 +1120,28 @@ export default function App() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                 >
-                  <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 mb-4">About Me</h2>
-                  <h3 className="text-4xl md:text-5xl font-bold mb-8">Bukola I. <span className="text-brand">Expert Wix & Velo Developer</span></h3>
+                  <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-500 mb-4">About Me</h2>
+                  <h3 className="text-4xl md:text-5xl font-bold mb-8 font-serif">Isaac <span className="text-brand">Expert Web Architect</span></h3>
                   <p 
                     contentEditable={isEditMode}
                     onBlur={(e) => updateContent('aboutText', e.currentTarget.innerText)}
                     suppressContentEditableWarning
-                    className="text-lg text-gray-600 leading-relaxed mb-8"
+                    className="text-lg text-gray-400 leading-relaxed mb-8"
                   >
                     {content.aboutText}
                   </p>
                   <div className="flex space-x-8">
                     <div>
-                      <p className="text-3xl font-bold">2+</p>
-                      <p className="text-xs uppercase tracking-widest text-gray-400">Years Exp.</p>
+                      <p className="text-3xl font-bold text-white">2+</p>
+                      <p className="text-xs uppercase tracking-widest text-gray-500">Years Exp.</p>
                     </div>
                     <div>
-                      <p className="text-3xl font-bold">Lagos</p>
-                      <p className="text-xs uppercase tracking-widest text-gray-400">Nigeria</p>
+                      <p className="text-3xl font-bold text-white">London</p>
+                      <p className="text-xs uppercase tracking-widest text-gray-500">United Kingdom</p>
                     </div>
                     <div>
-                      <p className="text-3xl font-bold">Elite</p>
-                      <p className="text-xs uppercase tracking-widest text-gray-400">Professional</p>
+                      <p className="text-3xl font-bold text-white">Elite</p>
+                      <p className="text-xs uppercase tracking-widest text-gray-500">Professional</p>
                     </div>
                   </div>
                 </motion.div>
@@ -772,10 +1151,10 @@ export default function App() {
         )}
 
         {currentView === 'case-studies' && (
-          <section id="case-studies" className="py-24 min-h-[70vh]">
+          <section id="case-studies" className="py-24 min-h-[70vh] bg-bg text-white">
             <div className="content-container">
-              <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 mb-4">Success Stories</h2>
-              <h1 className="text-5xl md:text-7xl font-bold mb-16">Case <span className="text-brand">Studies</span></h1>
+              <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-500 mb-4">Success Stories</h2>
+              <h1 className="text-5xl md:text-7xl font-bold mb-16 font-serif">Case <span className="text-brand">Studies</span></h1>
               
               <div className="grid grid-cols-1 gap-24">
                 {(content.caseStudies || []).map((cs, index) => (
@@ -794,22 +1173,22 @@ export default function App() {
                         <Trash2 size={16} />
                       </button>
                     )}
-                    <div className={`aspect-video bg-gray-100 rounded-3xl overflow-hidden relative ${index % 2 === 1 ? 'lg:order-2' : ''}`}>
+                    <div className={`aspect-video bg-surface rounded-sm overflow-hidden relative border border-white/5 ${index % 2 === 1 ? 'lg:order-2' : ''}`}>
                       <img 
                         src={cs.image} 
                         alt={cs.title} 
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
                         referrerPolicy="no-referrer"
                       />
                       {isEditMode && (
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="bg-white p-4 rounded-xl shadow-2xl w-64">
-                            <p className="text-[10px] font-bold uppercase text-gray-400 mb-2">Image URL</p>
+                        <div className="absolute inset-0 bg-bg/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="bg-surface p-4 rounded-sm shadow-2xl w-64 border border-white/10">
+                            <p className="text-[10px] font-bold uppercase text-gray-500 mb-2">Image URL</p>
                             <input 
                               type="text"
                               value={cs.image}
                               onChange={(e) => updateCaseStudy(cs.id, 'image', e.target.value)}
-                              className="text-xs p-2 border border-gray-200 rounded w-full outline-none focus:border-brand"
+                              className="text-xs p-2 bg-bg border border-white/10 rounded-sm w-full outline-none focus:border-brand text-white"
                               placeholder="https://..."
                             />
                           </div>
@@ -821,7 +1200,7 @@ export default function App() {
                         contentEditable={isEditMode}
                         onBlur={(e) => updateCaseStudy(cs.id, 'title', e.currentTarget.innerText)}
                         suppressContentEditableWarning
-                        className="text-3xl font-bold mb-2"
+                        className="text-3xl font-bold mb-2 font-serif"
                       >
                         {cs.title}
                       </h3>
@@ -836,34 +1215,34 @@ export default function App() {
                       
                       <div className="space-y-8">
                         <div>
-                          <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">The Challenge</h4>
+                          <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">The Challenge</h4>
                           <p 
                             contentEditable={isEditMode}
                             onBlur={(e) => updateCaseStudy(cs.id, 'challenge', e.currentTarget.innerText)}
                             suppressContentEditableWarning
-                            className="text-gray-600 leading-relaxed"
+                            className="text-gray-400 leading-relaxed"
                           >
                             {cs.challenge}
                           </p>
                         </div>
                         <div>
-                          <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">The Solution</h4>
+                          <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">The Solution</h4>
                           <p 
                             contentEditable={isEditMode}
                             onBlur={(e) => updateCaseStudy(cs.id, 'solution', e.currentTarget.innerText)}
                             suppressContentEditableWarning
-                            className="text-gray-600 leading-relaxed"
+                            className="text-gray-400 leading-relaxed"
                           >
                             {cs.solution}
                           </p>
                         </div>
-                        <div className="p-6 bg-brand/5 border-l-4 border-brand rounded-r-xl">
-                          <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">The Results</h4>
+                        <div className="p-6 bg-brand/5 border-l-4 border-brand rounded-sm">
+                          <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">The Results</h4>
                           <p 
                             contentEditable={isEditMode}
                             onBlur={(e) => updateCaseStudy(cs.id, 'results', e.currentTarget.innerText)}
                             suppressContentEditableWarning
-                            className="text-lg font-bold text-black"
+                            className="text-lg font-bold text-white"
                           >
                             {cs.results}
                           </p>
@@ -876,7 +1255,7 @@ export default function App() {
                 {isEditMode && (
                   <button 
                     onClick={addCaseStudy}
-                    className="w-full py-12 border-2 border-dashed border-gray-200 rounded-3xl text-gray-400 hover:border-brand hover:text-brand transition-all flex flex-col items-center justify-center"
+                    className="w-full py-12 border-2 border-dashed border-white/10 rounded-sm text-gray-500 hover:border-brand hover:text-brand transition-all flex flex-col items-center justify-center"
                   >
                     <Plus size={48} className="mb-4" />
                     <span className="font-bold uppercase tracking-widest text-sm">Add Case Study</span>
@@ -888,15 +1267,15 @@ export default function App() {
         )}
 
         {currentView === 'experience' && (
-          <section id="experience" className="py-24 min-h-[70vh] bg-gray-50">
+          <section id="experience" className="py-24 min-h-[70vh] bg-bg text-white">
             <div className="content-container">
-              <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 mb-4">My Journey</h2>
-              <h1 className="text-5xl md:text-7xl font-bold mb-16">Employment <span className="text-brand">History</span></h1>
+              <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-500 mb-4">My Journey</h2>
+              <h1 className="text-5xl md:text-7xl font-bold mb-16 font-serif">Employment <span className="text-brand">History</span></h1>
               
               <div className="max-w-4xl space-y-12">
                 {(content.employmentHistory || []).map((job) => (
-                  <div key={job.id} className="relative pl-12 border-l-2 border-gray-200 group">
-                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-brand border-4 border-white shadow-sm"></div>
+                  <div key={job.id} className="relative pl-12 border-l-2 border-white/10 group">
+                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-brand border-4 border-bg shadow-sm"></div>
                     {isEditMode && (
                       <button 
                         onClick={() => removeEmployment(job.id)}
@@ -911,7 +1290,7 @@ export default function App() {
                           contentEditable={isEditMode}
                           onBlur={(e) => updateEmployment(job.id, 'role', e.currentTarget.innerText)}
                           suppressContentEditableWarning
-                          className="text-2xl font-bold"
+                          className="text-2xl font-bold font-serif"
                         >
                           {job.role}
                         </h3>
@@ -928,7 +1307,7 @@ export default function App() {
                         contentEditable={isEditMode}
                         onBlur={(e) => updateEmployment(job.id, 'period', e.currentTarget.innerText)}
                         suppressContentEditableWarning
-                        className="text-xs font-bold uppercase tracking-widest text-gray-400 mt-2 md:mt-0"
+                        className="text-xs font-bold uppercase tracking-widest text-gray-500 mt-2 md:mt-0"
                       >
                         {job.period}
                       </p>
@@ -937,7 +1316,7 @@ export default function App() {
                       contentEditable={isEditMode}
                       onBlur={(e) => updateEmployment(job.id, 'description', e.currentTarget.innerText)}
                       suppressContentEditableWarning
-                      className="text-gray-600 leading-relaxed"
+                      className="text-gray-400 leading-relaxed"
                     >
                       {job.description}
                     </p>
@@ -947,7 +1326,7 @@ export default function App() {
                 {isEditMode && (
                   <button 
                     onClick={addEmployment}
-                    className="w-full py-8 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:border-brand hover:text-brand transition-all flex flex-col items-center justify-center"
+                    className="w-full py-8 border-2 border-dashed border-white/10 rounded-sm text-gray-500 hover:border-brand hover:text-brand transition-all flex flex-col items-center justify-center"
                   >
                     <Plus size={32} className="mb-2" />
                     <span className="font-bold uppercase tracking-widest text-xs">Add Experience</span>
@@ -959,10 +1338,10 @@ export default function App() {
         )}
 
         {currentView === 'services' && (
-          <section id="services" className="py-24 min-h-[70vh]">
+          <section id="services" className="py-24 min-h-[70vh] bg-bg text-white">
             <div className="content-container">
-              <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 mb-4">What I Do</h2>
-              <h1 className="text-5xl md:text-7xl font-bold mb-16">My <span className="text-brand">Services</span></h1>
+              <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-500 mb-4">What I Do</h2>
+              <h1 className="text-5xl md:text-7xl font-bold mb-16 font-serif">My <span className="text-brand">Services</span></h1>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
                 {content.services.map((service) => (
                   <div key={service.id} className="flex flex-col group relative">
@@ -974,7 +1353,7 @@ export default function App() {
                         <Trash2 size={16} />
                       </button>
                     )}
-                    <div className="w-16 h-16 bg-brand flex items-center justify-center mb-8 relative">
+                    <div className="w-16 h-16 bg-brand/10 text-brand flex items-center justify-center mb-8 relative rounded-sm">
                       {service.icon === 'Code' && <Code size={32} />}
                       {service.icon === 'Search' && <Search size={32} />}
                       {service.icon === 'Layout' && <Layout size={32} />}
@@ -1001,7 +1380,7 @@ export default function App() {
                       contentEditable={isEditMode}
                       onBlur={(e) => updateServiceItem(service.id, 'title', e.currentTarget.innerText)}
                       suppressContentEditableWarning
-                      className="text-2xl font-bold mb-4"
+                      className="text-2xl font-bold mb-4 font-serif"
                     >
                       {service.title}
                     </h3>
@@ -1009,7 +1388,7 @@ export default function App() {
                       contentEditable={isEditMode}
                       onBlur={(e) => updateServiceItem(service.id, 'description', e.currentTarget.innerText)}
                       suppressContentEditableWarning
-                      className="text-gray-500 leading-relaxed"
+                      className="text-gray-400 leading-relaxed"
                     >
                       {service.description}
                     </p>
@@ -1018,26 +1397,68 @@ export default function App() {
                 {isEditMode && (
                   <button 
                     onClick={addServiceItem}
-                    className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:border-brand hover:text-brand transition-all"
+                    className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-white/10 rounded-sm text-gray-500 hover:border-brand hover:text-brand transition-all"
                   >
                     <Plus size={48} className="mb-4" />
                     <span className="font-bold uppercase tracking-widest text-sm">Add Service</span>
                   </button>
                 )}
               </div>
+
+              {/* Platform Slider */}
+              <div className="mt-32 pt-16 border-t border-white/5 overflow-hidden">
+                <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-500 mb-12 text-center">Platforms I Master</h2>
+                
+                <div className="relative">
+                  <div className="flex space-x-12 whitespace-nowrap animate-marquee">
+                    {/* Duplicate platforms for infinite scroll effect */}
+                    {[...(content.platforms || []), ...(content.platforms || []), ...(content.platforms || [])].map((platform, index) => (
+                      <div 
+                        key={`${platform}-${index}`} 
+                        className="text-4xl md:text-6xl font-black text-white/5 hover:text-brand transition-colors cursor-default select-none relative group font-serif"
+                      >
+                        {platform}
+                        {isEditMode && index < (content.platforms || []).length && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removePlatform(index);
+                            }}
+                            className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {isEditMode && (
+                    <div className="flex justify-center mt-12">
+                      <button 
+                        onClick={addPlatform}
+                        className="flex items-center space-x-2 px-6 py-3 bg-surface rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-brand hover:text-bg transition-colors border border-white/5"
+                      >
+                        <Plus size={16} />
+                        <span>Add Platform</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </section>
         )}
 
         {currentView === 'policies' && (
-          <section className="py-24 md:py-40 min-h-[70vh]">
+          <section className="py-24 md:py-40 min-h-[70vh] bg-bg text-white">
             <div className="content-container">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
               >
-                <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 mb-4">Service Standards</h2>
-                <h1 className="text-5xl md:text-7xl font-bold mb-16">My <span className="text-brand">Policies</span></h1>
+                <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-500 mb-4">Service Standards</h2>
+                <h1 className="text-5xl md:text-7xl font-bold mb-16 font-serif">My <span className="text-brand">Policies</span></h1>
                 
                 <div className="grid grid-cols-1 gap-12 max-w-4xl">
                   {content.policies.map((policy, index) => (
@@ -1046,13 +1467,13 @@ export default function App() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
-                      className="border-l-4 border-brand pl-8 py-4"
+                      className="border-l-4 border-brand pl-8 py-4 bg-surface/30 rounded-r-sm"
                     >
                       <h3 
                         contentEditable={isEditMode}
                         onBlur={(e) => updatePolicyItem(policy.id, 'title', e.currentTarget.innerText)}
                         suppressContentEditableWarning
-                        className="text-2xl font-bold mb-4"
+                        className="text-2xl font-bold mb-4 font-serif"
                       >
                         {policy.title}
                       </h3>
@@ -1060,7 +1481,7 @@ export default function App() {
                         contentEditable={isEditMode}
                         onBlur={(e) => updatePolicyItem(policy.id, 'content', e.currentTarget.innerText)}
                         suppressContentEditableWarning
-                        className="text-lg text-gray-500 leading-relaxed"
+                        className="text-lg text-gray-400 leading-relaxed"
                       >
                         {policy.content}
                       </p>
@@ -1068,9 +1489,9 @@ export default function App() {
                   ))}
                 </div>
 
-                <div className="mt-24 p-12 bg-gray-50 rounded-3xl">
-                  <h3 className="text-3xl font-bold mb-6">My Service Standards Summary:</h3>
-                  <ul className="space-y-4 text-lg text-gray-600">
+                <div className="mt-24 p-12 bg-surface rounded-sm border border-white/5">
+                  <h3 className="text-3xl font-bold mb-6 font-serif">My Service Standards Summary:</h3>
+                  <ul className="space-y-4 text-lg text-gray-400">
                     <li className="flex items-center space-x-3">
                       <div className="w-2 h-2 bg-brand rounded-full"></div>
                       <span><strong>Satisfaction Guarantee:</strong> We finalize project scope before the contract begins.</span>
@@ -1118,7 +1539,7 @@ export default function App() {
                     href={content.upworkUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-4 bg-brand text-black px-12 py-6 text-xl font-bold hover:scale-105 transition-transform w-fit"
+                    className="inline-flex items-center space-x-4 bg-brand text-bg px-12 py-6 text-xl font-bold hover:scale-105 transition-transform w-fit"
                   >
                     <span>Start a Project</span>
                     <ExternalLink size={24} />
@@ -1143,21 +1564,37 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="py-20 border-t border-gray-100">
-        <div className="content-container">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+      <footer className="py-32 border-t border-white/5 bg-bg relative overflow-hidden">
+        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-[radial-gradient(circle_at_bottom,rgba(16,185,129,0.03)_0%,transparent_70%)] pointer-events-none"></div>
+        <div className="content-container relative z-10">
+          <div className="max-w-4xl mb-24">
+            <h2 className="text-5xl md:text-8xl font-bold font-serif leading-[1.1] mb-12">
+              Ready to automate your <span className="text-brand">operations?</span>
+            </h2>
+            <a 
+              href={content.upworkUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center space-x-4 bg-brand text-bg px-12 py-6 text-xl font-bold hover:bg-brand/90 transition-all rounded-sm group"
+            >
+              <span>Claim Your Strategy Session</span>
+              <ExternalLink size={24} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+            </a>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-16 pt-16 border-t border-white/5">
             <div className="col-span-1 md:col-span-2">
-              <div className="text-2xl font-extrabold tracking-tighter mb-6">
-                WEBSITE<span className="text-brand">.</span>EXPERT
+              <div className="text-2xl font-black tracking-tighter font-serif mb-6">
+                ISAAC<span className="text-brand">WEB</span>
               </div>
-              <p className="text-gray-400 max-w-sm">
-                Building high-performance digital experiences that drive growth and engagement.
+              <p className="text-gray-500 max-w-sm leading-relaxed">
+                Architecting high-performance digital ecosystems that turn websites into 24/7 sales employees.
               </p>
             </div>
             <div>
-              <h4 className="font-bold mb-6 uppercase text-xs tracking-widest text-gray-400">Contact</h4>
+              <h4 className="font-bold mb-8 uppercase text-xs tracking-[0.2em] text-gray-500">Contact</h4>
               <ul className="space-y-4">
-                <li className="flex items-center space-x-3">
+                <li className="flex items-center space-x-3 text-gray-400">
                   <Mail size={16} className="text-brand" />
                   <span 
                     contentEditable={isEditMode}
@@ -1167,7 +1604,7 @@ export default function App() {
                     {content.footerEmail}
                   </span>
                 </li>
-                <li className="flex items-center space-x-3">
+                <li className="flex items-center space-x-3 text-gray-400">
                   <Phone size={16} className="text-brand" />
                   <span 
                     contentEditable={isEditMode}
@@ -1177,35 +1614,26 @@ export default function App() {
                     {content.footerPhone}
                   </span>
                 </li>
-                <li className="flex items-center space-x-3">
-                  <MapPin size={16} className="text-brand" />
-                  <span 
-                    contentEditable={isEditMode}
-                    onBlur={(e) => updateContent('footerAddress', e.currentTarget.innerText)}
-                    suppressContentEditableWarning
-                  >
-                    {content.footerAddress}
-                  </span>
-                </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold mb-6 uppercase text-xs tracking-widest text-gray-400">Navigation</h4>
-              <ul className="space-y-4 text-sm font-medium">
-                <li><button onClick={() => navigateTo('home')} className="hover:text-brand transition-colors">Home</button></li>
-                <li><button onClick={() => navigateTo('portfolio')} className="hover:text-brand transition-colors">Portfolio</button></li>
-                <li><button onClick={() => navigateTo('services')} className="hover:text-brand transition-colors">Services</button></li>
-                <li><button onClick={() => navigateTo('about')} className="hover:text-brand transition-colors">About</button></li>
-                <li><button onClick={() => navigateTo('policies')} className="hover:text-brand transition-colors">Policies</button></li>
-                <li><button onClick={() => navigateTo('contact')} className="hover:text-brand transition-colors">Contact</button></li>
-              </ul>
+              <h4 className="font-bold mb-8 uppercase text-xs tracking-[0.2em] text-gray-500">Location</h4>
+              <p className="text-gray-400 leading-relaxed">
+                <span 
+                  contentEditable={isEditMode}
+                  onBlur={(e) => updateContent('footerAddress', e.currentTarget.innerText)}
+                  suppressContentEditableWarning
+                >
+                  {content.footerAddress}
+                </span>
+              </p>
             </div>
           </div>
-          <div className="mt-20 pt-8 border-t border-gray-50 flex flex-col md:flex-row justify-between items-center text-xs text-gray-400 uppercase tracking-widest font-medium">
-            <p>&copy; 2026 Website Expert. All rights reserved.</p>
-            <div className="flex space-x-8 mt-4 md:mt-0">
-              <a href="#" className="hover:text-black">Privacy Policy</a>
-              <a href="#" className="hover:text-black">Terms of Service</a>
+          <div className="mt-24 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-xs font-bold uppercase tracking-widest text-gray-500">
+            <p>© {new Date().getFullYear()} ISAACWEB. ALL RIGHTS RESERVED.</p>
+            <div className="flex space-x-8">
+              <button onClick={() => navigateTo('policies')} className="hover:text-brand transition-colors">Privacy Policy</button>
+              <button onClick={() => navigateTo('policies')} className="hover:text-brand transition-colors">Terms of Service</button>
             </div>
           </div>
         </div>
@@ -1223,14 +1651,14 @@ export default function App() {
             <button 
               onClick={saveChanges}
               disabled={isSaving}
-              className={`flex items-center space-x-2 bg-brand text-black px-8 py-4 rounded-full font-bold shadow-2xl transition-all ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:scale-105'}`}
+              className={`flex items-center space-x-2 bg-brand text-bg px-8 py-4 rounded-full font-bold shadow-2xl transition-all ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:scale-105'}`}
             >
               {isSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
               <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
             </button>
             <button 
               onClick={() => setIsEditMode(false)}
-              className="flex items-center justify-center bg-white text-black w-14 h-14 rounded-full shadow-2xl hover:bg-gray-100 transition-colors"
+              className="flex items-center justify-center bg-surface text-white w-14 h-14 rounded-full shadow-2xl hover:bg-white/10 transition-colors border border-white/10"
             >
               <X size={24} />
             </button>
@@ -1251,25 +1679,25 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white p-8 md:p-12 max-w-md w-full rounded-2xl shadow-2xl"
+              className="bg-surface p-8 md:p-12 max-w-md w-full rounded-sm shadow-2xl border border-white/10"
             >
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-bold">Admin Access</h2>
-                <button onClick={() => setShowLoginModal(false)} className="text-gray-400 hover:text-black">
+                <h2 className="text-2xl font-bold font-serif">Admin Access</h2>
+                <button onClick={() => setShowLoginModal(false)} className="text-gray-500 hover:text-white">
                   <X size={24} />
                 </button>
               </div>
               <div className="text-center">
-                <div className="flex border-b border-gray-100 mb-8">
+                <div className="flex border-b border-white/5 mb-8">
                   <button 
                     onClick={() => setLoginMethod('google')}
-                    className={`flex-1 py-3 text-sm font-bold uppercase tracking-widest transition-colors ${loginMethod === 'google' ? 'text-brand border-b-2 border-brand' : 'text-gray-400'}`}
+                    className={`flex-1 py-3 text-sm font-bold uppercase tracking-widest transition-colors ${loginMethod === 'google' ? 'text-brand border-b-2 border-brand' : 'text-gray-500'}`}
                   >
                     Google
                   </button>
                   <button 
                     onClick={() => setLoginMethod('email')}
-                    className={`flex-1 py-3 text-sm font-bold uppercase tracking-widest transition-colors ${loginMethod === 'email' ? 'text-brand border-b-2 border-brand' : 'text-gray-400'}`}
+                    className={`flex-1 py-3 text-sm font-bold uppercase tracking-widest transition-colors ${loginMethod === 'email' ? 'text-brand border-b-2 border-brand' : 'text-gray-500'}`}
                   >
                     Email
                   </button>
@@ -1277,11 +1705,11 @@ export default function App() {
 
                 {loginMethod === 'google' ? (
                   <>
-                    <p className="text-gray-500 mb-8">Login with your Google account to enable live editing mode. Only authorized admins can save changes.</p>
+                    <p className="text-gray-400 mb-8">Login with your Google account to enable live editing mode. Only authorized admins can save changes.</p>
                     <button 
                       onClick={handleLogin}
                       disabled={isLoggingIn}
-                      className={`w-full flex items-center justify-center space-x-3 bg-black text-white py-4 rounded-xl font-bold transition-colors ${isLoggingIn ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-800'}`}
+                      className={`w-full flex items-center justify-center space-x-3 bg-brand text-bg py-4 rounded-sm font-bold transition-colors ${isLoggingIn ? 'opacity-70 cursor-not-allowed' : 'hover:bg-brand/90'}`}
                     >
                       {isLoggingIn ? <Loader2 size={20} className="animate-spin" /> : <LogIn size={20} />}
                       <span>{isLoggingIn ? 'Logging in...' : 'Login with Google'}</span>
@@ -1290,23 +1718,23 @@ export default function App() {
                 ) : (
                   <form onSubmit={handleEmailLogin} className="text-left">
                     <div className="mb-4">
-                      <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Email Address</label>
+                      <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Email Address</label>
                       <input 
                         type="email" 
                         value={emailInput}
                         onChange={(e) => setEmailInput(e.target.value)}
-                        className="w-full p-4 border-2 border-gray-100 rounded-xl focus:border-brand outline-none transition-colors"
+                        className="w-full p-4 bg-bg border-2 border-white/5 rounded-sm focus:border-brand outline-none transition-colors text-white"
                         placeholder="your@email.com"
                         required
                       />
                     </div>
                     <div className="mb-8">
-                      <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Password</label>
+                      <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Password</label>
                       <input 
                         type="password" 
                         value={passwordInput}
                         onChange={(e) => setPasswordInput(e.target.value)}
-                        className="w-full p-4 border-2 border-gray-100 rounded-xl focus:border-brand outline-none transition-colors"
+                        className="w-full p-4 bg-bg border-2 border-white/5 rounded-sm focus:border-brand outline-none transition-colors text-white"
                         placeholder="••••••••"
                         required
                       />
@@ -1314,7 +1742,7 @@ export default function App() {
                     <button 
                       type="submit"
                       disabled={isLoggingIn}
-                      className={`w-full flex items-center justify-center space-x-3 bg-black text-white py-4 rounded-xl font-bold transition-colors ${isLoggingIn ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-800'}`}
+                      className={`w-full flex items-center justify-center space-x-3 bg-brand text-bg py-4 rounded-sm font-bold transition-colors ${isLoggingIn ? 'opacity-70 cursor-not-allowed' : 'hover:bg-brand/90'}`}
                     >
                       {isLoggingIn ? <Loader2 size={20} className="animate-spin" /> : <LogIn size={20} />}
                       <span>{isLoggingIn ? 'Logging in...' : 'Login with Email'}</span>
@@ -1340,23 +1768,23 @@ export default function App() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white w-full h-full rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+              className="bg-surface w-full h-full rounded-sm shadow-2xl overflow-hidden flex flex-col border border-white/10"
             >
-              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-white">
+              <div className="p-4 border-b border-white/5 flex justify-between items-center bg-surface">
                 <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                  <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-400"></div>
-                  <span className="ml-4 text-xs font-bold uppercase tracking-widest text-gray-400">Design Preview</span>
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span className="ml-4 text-xs font-bold uppercase tracking-widest text-gray-500">Design Preview</span>
                 </div>
                 <button 
                   onClick={() => setPreviewHtml(null)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  className="p-2 hover:bg-white/5 rounded-full transition-colors text-white"
                 >
                   <X size={24} />
                 </button>
               </div>
-              <div className="flex-grow bg-gray-50">
+              <div className="flex-grow bg-bg">
                 <iframe 
                   srcDoc={previewHtml}
                   title="Design Preview"
@@ -1376,11 +1804,11 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-white"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-bg"
           >
             <div className="flex flex-col items-center">
               <Loader2 size={48} className="text-brand animate-spin mb-4" />
-              <p className="text-sm font-bold uppercase tracking-widest text-gray-400">Syncing with Cloud...</p>
+              <p className="text-sm font-bold uppercase tracking-widest text-gray-500">Syncing with Cloud...</p>
             </div>
           </motion.div>
         )}

@@ -7,8 +7,10 @@
       "properties": {
         "heroTitle": { "type": "string" },
         "heroSub": { "type": "string" },
+        "pillars": { "type": "array", "items": { "type": "object" } },
         "portfolio": { "type": "array", "items": { "type": "object" } },
         "services": { "type": "array", "items": { "type": "object" } },
+        "techStack": { "type": "array", "items": { "type": "string" } },
         "footerEmail": { "type": "string" },
         "footerPhone": { "type": "string" },
         "footerAddress": { "type": "string" },
@@ -17,7 +19,8 @@
         "upworkUrl": { "type": "string" },
         "policies": { "type": "array", "items": { "type": "object" } },
         "caseStudies": { "type": "array", "items": { "type": "object" } },
-        "employmentHistory": { "type": "array", "items": { "type": "object" } }
+        "employmentHistory": { "type": "array", "items": { "type": "object" } },
+        "platforms": { "type": "array", "items": { "type": "string" } }
       }
     }
   },

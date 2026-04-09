@@ -1,26 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --color-brand: #cff524;
+  --font-serif: "Playfair Display", serif;
+  --color-brand: #10B981;
+  --color-bg: #080808;
+  --color-surface: #121212;
 }
 
 @layer base {
   body {
-    @apply bg-white text-black font-sans antialiased;
+    @apply bg-bg text-white font-sans antialiased;
   }
 }
 
 @layer utilities {
   .content-container {
-    @apply w-full max-w-[1600px] mx-auto px-6 md:px-12;
+    @apply w-full max-w-[1400px] mx-auto px-6 md:px-12;
+  }
+
+  .animate-marquee {
+    animation: marquee 40s linear infinite;
+  }
+
+  @keyframes marquee {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
   }
 }
 
 [contenteditable="true"] {
-  @apply outline-none ring-2 ring-brand ring-offset-2 rounded-sm transition-all;
+  @apply outline-none ring-1 ring-brand/50 ring-offset-1 ring-offset-bg rounded-sm transition-all;
 }
 
 [contenteditable="true"]:hover {
-  @apply bg-brand/5;
+  @apply bg-brand/10;
 }

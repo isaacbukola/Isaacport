@@ -36,10 +36,13 @@ service cloud.firestore {
     }
 
     function isValidContent(data) {
-      return data.heroTitle is string &&
+      return data.keys().hasAll(['heroTitle', 'heroSub', 'pillars', 'portfolio', 'services', 'techStack', 'footerEmail', 'footerPhone', 'footerAddress', 'aboutText', 'aboutImage', 'upworkUrl', 'policies', 'caseStudies', 'employmentHistory', 'platforms']) &&
+             data.heroTitle is string &&
              data.heroSub is string &&
+             data.pillars is list &&
              data.portfolio is list &&
              data.services is list &&
+             data.techStack is list &&
              data.footerEmail is string &&
              data.footerPhone is string &&
              data.footerAddress is string &&
@@ -48,7 +51,8 @@ service cloud.firestore {
              data.upworkUrl is string &&
              data.policies is list &&
              (!('caseStudies' in data) || data.caseStudies is list) &&
-             (!('employmentHistory' in data) || data.employmentHistory is list);
+             (!('employmentHistory' in data) || data.employmentHistory is list) &&
+             (!('platforms' in data) || data.platforms is list);
     }
 
     // ===============================================================
